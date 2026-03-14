@@ -85,6 +85,16 @@ st.markdown("""
         margin-bottom: 8px;
         box-shadow: 1px 1px 5px rgba(0,0,0,0.05);
     }
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #f1f1f1;
+        color: black;
+        text-align: center;
+        padding: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -169,6 +179,7 @@ with tab4:
         "IC Superior": promedios.values + error.values
     })
 
+    # Formateo de tabla 100% en el idioma seleccionado
     st.dataframe(
         df_ic.style.format(precision=4)
         .bar(subset=['Media'], color='#BEE3DB', vmin=1, vmax=5)
@@ -184,6 +195,7 @@ with tab4:
     st.text(f"{'Coefficiente R²' if sel_idioma=='Italiano' else 'Coeficiente R²'}: {modelo.rsquared:.4f}")
     
     st.subheader(lang["dispersion"])
+    # Etiquetas del gráfico según idioma
     labels_graf = {"Analisis": "Análisis" if sel_idioma=="Español" else "Analisi", 
                    "Indice_PC": "Pensamiento Crítico" if sel_idioma=="Español" else "Pensiero Critico",
                    "Uso_IA": "Uso IA"}
@@ -206,6 +218,10 @@ st.header(lang["encuesta"])
 with st.form("encuesta"):
     u_sel = st.selectbox(lang["modo_uso"], [lang["m_and"], lang["m_sus"]])
     if st.form_submit_button(lang["btn_reg"]):
+        # --- EFECTO DE GLOBOS HACIA ARRIBA ---
+        st.balloons() 
+        
+        # Mapear selección de vuelta a la clave original
         val_uso = "Andamiaje" if u_sel in ["Andamiaje", "Impalcatura"] else "Sustituto"
         
         nuevo_dato = pd.DataFrame({
@@ -216,9 +232,16 @@ with st.form("encuesta"):
             "Inferencia": [np.random.normal(4.1, 0.2)]
         })
         st.session_state.main_data = pd.concat([st.session_state.main_data, nuevo_dato], ignore_index=True)
-        # --- EFECTO DE GLOBOS HACIA ARRIBA ---
-        st.balloons() 
         st.success(lang["exito"])
         st.rerun()
 
 st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_unemi.csv", "text/csv")
+
+# ------------------------------------------------
+# PIE DE PÁGINA
+# ------------------------------------------------
+st.markdown("""
+<div class="footer">
+    <p>&copy; Elaborado por Ing. Willan Álvarez C.</p>
+</div>
+""", unsafe_allow_html=True)
