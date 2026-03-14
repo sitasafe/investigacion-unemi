@@ -8,13 +8,20 @@ from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
 from scipy import stats
 import google.generativeai as genai
+import os
 
 # ------------------------------------------------
-# CONFIGURACIÓN DE GEMINI (IA)
+# CONFIGURACIÓN DE GEMINI (IA) - SEGURIDAD Y ACTUALIZACIÓN
 # ------------------------------------------------
-API_KEY = "AIzaSyC3XWlImuVEFuqo5p0H0FjcKX0n5XmlF1E"
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Recuerda configurar GEMINI_API_KEY en los Secrets de Streamlit
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+if API_KEY:
+    genai.configure(api_key=API_KEY)
+    # Usamos gemini-2.0-flash, el modelo más actual y rápido disponible
+    model = genai.GenerativeModel("gemini-2.0-flash")
+else:
+    model = None
 
 # ------------------------------------------------
 # 1. FUNCIONES DE LÓGICA
@@ -30,24 +37,33 @@ def generar_datos(n):
         "Inferencia": np.random.normal(3.9,0.3,n).clip(1,5)
     })
 
-def obtener_explicacion_ia(df_stats, r2):
+def obtener_explicacion_ia(df_stats, r2, pearson, p_val):
+    if model is None:
+        return "⚠️ Configura la GEMINI_API_KEY en los Secrets de Streamlit para activar la IA."
+    
     try:
         prompt = f"""
         Actúa como un experto en estadística educativa de la UNEMI. 
-        Analiza estos datos sobre IA y Pensamiento Crítico:
-        - Promedios por habilidad: {df_stats.to_dict()}
-        - Coeficiente R2: {r2:.4f}
+        Analiza estos datos de investigación sobre IA y Pensamiento Crítico:
+        - Promedios: {df_stats.to_dict()}
+        - R² (Varianza): {r2:.4f}
+        - Correlación Pearson: {pearson:.3f}
+        - Valor p: {p_val:.4f}
         
-        Dame una conclusión breve (máximo 3 párrafos) sobre si la IA está ayudando 
-        al pensamiento crítico o si actúa como un sustituto. Sé muy profesional.
+        Dame una conclusión académica de 3 párrafos sobre si la IA funciona como 
+        andamiaje o sustituto en este grupo. Sé muy profesional.
         """
         response = model.generate_content(prompt)
-        return response.text
+        
+        if hasattr(response, "text"):
+            return response.text
+        else:
+            return "La IA no pudo generar el texto de respuesta."
     except Exception as e:
-        return f"Nota: La IA está procesando otros datos. ({str(e)})"
+        return f"Error técnico con Gemini 2.0: {str(e)}"
 
 # ------------------------------------------------
-# 2. DICCIONARIO DE TRADUCCIÓN (CORREGIDO)
+# 2. DICCIONARIO DE TRADUCCIÓN
 # ------------------------------------------------
 idiomas = {
     "Español": {
@@ -63,11 +79,9 @@ idiomas = {
         "m_and": "Andamiaje",
         "m_sus": "Sustituto",
         "regresion": "🤖 Modelo de Regresión",
-        "dispersion": "🎯 Gráfico de Correlación",
         "encuesta": "📝 Simulación de Encuesta",
         "btn_reg": "Registrar y Actualizar",
-        "exito": "¡Datos enviados con éxito!",
-        "descarga": "📥 Descargar",
+        "descarga": "📥 Descargar CSV",
         "modo_uso": "Modo de uso",
         "guia_doc": "👨‍🏫 Para Docentes",
         "guia_est": "🎓 Para Estudiantes",
@@ -89,11 +103,9 @@ idiomas = {
         "m_and": "Impalcatura",
         "m_sus": "Sostituto",
         "regresion": "🤖 Modello di Regressione",
-        "dispersion": "🎯 Grafico di Correlazione",
         "encuesta": "📝 Simulazione di Sondaggio",
         "btn_reg": "Registrare e Aggiornare",
-        "exito": "Dati inviati con successo!",
-        "descarga": "📥 Scarica il database CSV",
+        "descarga": "📥 Scarica CSV",
         "modo_uso": "Modalità d'uso",
         "guia_doc": "👨‍🏫 Per i docenti",
         "guia_est": "🎓 Per gli studenti",
@@ -123,7 +135,7 @@ st.markdown("""
     .stApp { background-color: #FDFCF0; }
     .integrante-card {
         background-color: #FFFFFF; padding: 10px; border-radius: 8px; 
-        border-left: 5px solid #BEE3DB; margin-bottom: 8px;
+        border-left: 5px solid #BEE3DB; margin-bottom: 8px; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
     }
     .ia-box {
         background-color: #E8F0FE; padding: 20px; border-radius: 10px;
@@ -151,7 +163,7 @@ promedios = datos[habilidades].mean()
 # ------------------------------------------------
 st.title(lang["titulo"])
 st.subheader(lang["sub"])
-st.markdown(f"**🎓 Maestría** | **👨‍🏫 {lang['tutor']}:** Bonisoli Lorenzo PhD. | **📅 07/03/2026**")
+st.markdown(f"**👨‍🏫 {lang['tutor']}:** Bonisoli Lorenzo PhD. | **📅 07/03/2026**")
 
 st.write(f"### {lang['equipo']}")
 col1, col2, col3 = st.columns(3)
@@ -185,22 +197,28 @@ with tab2:
 
 with tab3:
     st.header(lang["tabs"][2])
-    st.plotly_chart(px.bar(pd.DataFrame({"Hab": habilidades, "Prom": promedios.values}), x="Hab", y="Prom", color="Prom"), use_container_width=True)
+    st.plotly_chart(px.bar(pd.DataFrame({"Hab": habilidades, "Prom": promedios.values}), x="Hab", y="Prom", color="Prom", color_continuous_scale='Teal'), use_container_width=True)
 
 with tab4:
     st.header(lang["tabs"][3])
+    # Estadística Avanzada
     datos["Indice_PC"] = datos[habilidades].mean(axis=1)
     datos["Uso_IA_bin"] = datos["Uso_IA"].map({"Andamiaje":1, "Sustituto":0})
     modelo = sm.OLS(datos["Indice_PC"], sm.add_constant(datos["Uso_IA_bin"])).fit()
+    correlacion, p_valor = stats.pearsonr(datos["Uso_IA_bin"], datos["Indice_PC"])
     
-    st.subheader("🤖 Interpretación con IA")
-    if st.button("Generar Análisis con IA"):
-        with st.spinner("Analizando..."):
-            explicacion = obtener_explicacion_ia(promedios, modelo.rsquared)
+    st.subheader("🤖 Interpretación con Gemini 2.0")
+    if st.button("Generar Análisis Académico"):
+        with st.spinner("Analizando datos..."):
+            explicacion = obtener_explicacion_ia(promedios, modelo.rsquared, correlacion, p_valor)
             st.markdown(f'<div class="ia-box">{explicacion}</div>', unsafe_allow_html=True)
     
     st.divider()
-    st.metric("Coeficiente R²", f"{modelo.rsquared:.4f}")
+    st.subheader("📊 Métricas de Investigación")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Coeficiente R²", f"{modelo.rsquared:.4f}")
+    m2.metric("Correlación Pearson", f"{correlacion:.3f}")
+    m3.metric("Valor p", f"{p_valor:.4f}")
 
 with tab5:
     st.header(lang["tabs"][4])
@@ -209,10 +227,10 @@ with tab5:
 
 st.divider()
 st.header(lang["encuesta"])
-with st.form("encuesta"):
+with st.form("encuesta_form"):
     u_sel = st.selectbox(lang["modo_uso"], [lang["m_and"], lang["m_sus"]])
     if st.form_submit_button(lang["btn_reg"]):
         st.session_state.lanzar_globos = True
         st.rerun()
 
-st.caption("Developed by Ing. Willan E. Álvarez C. - UNEMI")
+st.caption("Developed by Ing. Willan E. Álvarez C. - UNEMI 2026")
