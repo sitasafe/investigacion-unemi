@@ -14,8 +14,9 @@ import google.generativeai as genai  # <--- NUEVA LIBRERÍA
 # ------------------------------------------------
 API_KEY = "AIzaSyC3XWlImuVEFuqo5p0H0FjcKX0n5XmlF1E" 
 genai.configure(api_key=API_KEY)
-# Cambiamos a 'gemini-1.5-flash-latest' para evitar el error 404
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+
+# Usamos el nombre de modelo más compatible
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # ------------------------------------------------
 # 1. FUNCIONES DE LÓGICA
@@ -35,6 +36,11 @@ def generar_datos(n):
 def obtener_explicacion_ia(df_stats, r2):
     """Usa Gemini para interpretar los datos estadísticos."""
     try:
+        # Forzamos la configuración dentro por si acaso el servidor la pierde
+        genai.configure(api_key=API_KEY)
+        # Intentamos con el modelo flash estándar
+        model_env = genai.GenerativeModel('gemini-1.5-flash')
+        
         prompt = f"""
         Actúa como un experto en estadística educativa. 
         Analiza estos datos de una investigación en la UNEMI sobre IA y Pensamiento Crítico:
@@ -44,10 +50,10 @@ def obtener_explicacion_ia(df_stats, r2):
         Dame una conclusión breve (máximo 3 párrafos) sobre si la IA está ayudando 
         al pensamiento crítico o si actúa como un sustituto. Sé muy profesional.
         """
-        response = model.generate_content(prompt)
+        response = model_env.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"Error técnico con Gemini: {str(e)}"
+        return f"Error técnico con Gemini: {str(e)}. Intenta de nuevo en unos segundos."
 
 # ------------------------------------------------
 # 2. DICCIONARIO DE TRADUCCIÓN
@@ -87,7 +93,7 @@ idiomas = {
         "config": "⚙️ Impostazioni",
         "muestra": "Dimensione del campione",
         "tabs": ["📂 Prodotto", "📊 Diagnosi", "🧠 Mappatura", "📉 Statistica", "💡 Guida"],
-        "obj": "Obiettivo: Analizzare la relazione tra IAGen e Pensiero Critico in UNEMI.",
+        "obj": "Objetivo: Analizzare la relazione tra IAGen e Pensiero Critico in UNEMI.",
         "m_est": "Studenti",
         "m_and": "Impalcatura",
         "m_sus": "Sostituto",
@@ -191,66 +197,4 @@ with tab2:
     st.dataframe(datos[habilidades].describe().T)
     st.divider()
     uso = datos["Uso_IA"].value_counts(normalize=True)*100
-    c1, c2, c3 = st.columns(3)
-    c1.metric(lang["m_est"], len(datos))
-    c2.metric(lang["m_and"], f"{uso.get('Andamiaje',0):.1f}%")
-    c3.metric(lang["m_sus"], f"{uso.get('Sustituto',0):.1f}%")
-    st.plotly_chart(px.pie(names=uso.index, values=uso.values, hole=0.4, color_discrete_sequence=['#BEE3DB', '#FFD8BE']), use_container_width=True)
-
-with tab3:
-    st.header(lang["tabs"][2])
-    col_rad1, col_rad2 = st.columns(2)
-    with col_rad1:
-        st.plotly_chart(px.bar(pd.DataFrame({"Hab": habilidades, "Prom": promedios.values}), x="Hab", y="Prom", color="Prom", color_continuous_scale='Teal'), use_container_width=True)
-    with col_rad2:
-        st.subheader("🧠 Perfil Radar")
-        fig_radar = go.Figure(data=go.Scatterpolar(r=promedios.values, theta=habilidades, fill='toself', fillcolor='rgba(190, 227, 219, 0.6)', line=dict(color='#BEE3DB')))
-        fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[1,5])), showlegend=False)
-        st.plotly_chart(fig_radar, use_container_width=True)
-
-with tab4:
-    st.header(lang["tabs"][3])
-    st.subheader("🔢 Correlación de Pearson")
-    st.plotly_chart(px.imshow(datos[habilidades].corr(), text_auto=True, color_continuous_scale='RdBu_r'), use_container_width=True)
-    st.divider()
-    
-    # REGRESIÓN
-    datos["Indice_PC"] = datos[habilidades].mean(axis=1)
-    datos["Uso_IA_bin"] = datos["Uso_IA"].map({"Andamiaje":1, "Sustituto":0})
-    modelo = sm.OLS(datos["Indice_PC"], sm.add_constant(datos["Uso_IA_bin"])).fit()
-    
-    st.subheader("🤖 Interpretación con IA (Google Gemini)")
-    if st.button("Generar Análisis con IA"):
-        with st.spinner("Gemini está analizando los datos..."):
-            explicacion = obtener_explicacion_ia(promedios, modelo.rsquared)
-            st.markdown(f'<div class="ia-box">{explicacion}</div>', unsafe_allow_html=True)
-    
-    st.divider()
-    st.subheader("📘 Estadísticas de Regresión")
-    if modelo.rsquared > 0.5: st.success(f"Relación fuerte (R²: {modelo.rsquared:.4f})")
-    else: st.info(f"Relación moderada/débil (R²: {modelo.rsquared:.4f})")
-
-with tab5:
-    st.header(lang["tabs"][4])
-    for g in ["guia_doc", "guia_est", "guia_ins"]:
-        with st.expander(lang[g]): st.write(lang["txt_" + g.split('_')[1]])
-
-st.divider()
-st.header(lang["encuesta"])
-with st.form("encuesta"):
-    u_sel = st.selectbox(lang["modo_uso"], [lang["m_and"], lang["m_sus"]])
-    if st.form_submit_button(lang["btn_reg"]):
-        st.session_state.lanzar_globos = True
-        val_uso = "Andamiaje" if u_sel in ["Andamiaje", "Impalcatura"] else "Sustituto"
-        nuevo = pd.DataFrame({"Uso_IA": [val_uso], "Analisis": [np.random.normal(4.0, 0.4)], "Evaluacion": [np.random.normal(3.5, 0.5)], "Autorregulacion": [np.random.normal(3.8, 0.3)], "Inferencia": [np.random.normal(4.1, 0.2)]})
-        st.session_state.main_data = pd.concat([st.session_state.main_data, nuevo], ignore_index=True)
-        st.rerun()
-
-st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_profesional.csv", "text/csv")
-
-st.divider()
-st.caption("""
-Research Data Analytics System  
-Developed by Ing. Willan E. Álvarez C.  
-Maestría en Educación mención en Docencia e Investigación en Educación Superior – Universidad Estatal de Milagro
-""")
+    c1, c2, c3 = st
