@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
 
 # ------------------------------------------------
-# DICCIONARIO DE TRADUCCIÓN COMPLETO
+# DICCIONARIO DE TRADUCCIÓN COMPLETO (REVISADO Y CORREGIDO)
 # ------------------------------------------------
 idiomas = {
     "Español": {
@@ -24,10 +24,17 @@ idiomas = {
         "m_sus": "Sustituto",
         "regresion": "🤖 Modelo de Regresión",
         "dispersion": "🎯 Gráfico de Correlación",
-        "encuesta": "📝 Simulación de Encuesta (Registro Dinámico)",
-        "btn_reg": "Registrar y Actualizar Datos",
-        "exito": "¡Datos enviados y estadísticas actualizadas!",
-        "descarga": "📥 Descargar Base CSV"
+        "encuesta": "📝 Simulación de Encuesta",
+        "btn_reg": "Registrar y Actualizar",
+        "exito": "¡Datos enviados con éxito!",
+        "descarga": "📥 Descargar Base CSV",
+        "modo_uso": "Modo de uso",
+        "guia_doc": "👨‍🏫 Para Docentes",
+        "guia_est": "🎓 Para Estudiantes",
+        "guia_ins": "🏛️ Para Instituciones",
+        "txt_doc": "- Fomentar el uso de IA como **andamiaje cognitivo**.",
+        "txt_est": "- Contrastar resultados de IA con fuentes académicas.",
+        "txt_ins": "- Crear políticas de integridad académica y ética digital."
     },
     "Italiano": {
         "titulo": "📊 Rapporto Accademico di Ricerca",
@@ -44,9 +51,16 @@ idiomas = {
         "regresion": "🤖 Modello di Regressione",
         "dispersion": "🎯 Grafico di Correlazione",
         "encuesta": "📝 Simulazione di Sondaggio",
-        "btn_reg": "Registrare e aggiornare",
-        "exito": "Dati inviati e statistiche aggiornate!",
-        "descarga": "📥 Scarica il database CSV"
+        "btn_reg": "Registrare e Aggiornare",
+        "exito": "Dati inviati con successo!",
+        "descarga": "📥 Scarica il database CSV",
+        "modo_uso": "Modalità d'uso",
+        "guia_doc": "👨‍🏫 Per i docenti",
+        "guia_est": "🎓 Per gli studenti",
+        "guia_ins": "🏛️ Per le istituzioni",
+        "txt_doc": "- Incoraggiare l'uso dell'IA come **impalcatura cognitiva**.",
+        "txt_est": "- Confrontare i risultati dell'IA con fonti accademiche.",
+        "txt_ins": "- Creare politiche di integrità accademica e etica digitale."
     }
 }
 
@@ -95,24 +109,23 @@ with c_i3:
 st.divider()
 
 # ------------------------------------------------
-# LÓGICA DE DATOS DINÁMICA
+# MANEJO DE ESTADO DE DATOS
 # ------------------------------------------------
 with st.sidebar:
     st.header(lang["config"])
-    n_muestra_inicial = st.slider(lang["muestra"], 50, 500, 100)
+    n_muestra_input = st.slider(lang["muestra"], 50, 500, 100)
 
-# Usamos session_state para que los datos no se borren al hacer clic en botones
-if 'datos_estudio' not in st.session_state:
+if 'main_data' not in st.session_state:
     np.random.seed(42)
-    st.session_state.datos_estudio = pd.DataFrame({
-        "Uso_IA": np.random.choice(["Andamiaje","Sustituto"], n_muestra_inicial, p=[0.65,0.35]),
-        "Analisis": np.random.normal(3.8,0.5,n_muestra_inicial).clip(1,5),
-        "Evaluacion": np.random.normal(3.2,0.6,n_muestra_inicial).clip(1,5),
-        "Autorregulacion": np.random.normal(3.5,0.4,n_muestra_inicial).clip(1,5),
-        "Inferencia": np.random.normal(3.9,0.3,n_muestra_inicial).clip(1,5)
+    st.session_state.main_data = pd.DataFrame({
+        "Uso_IA": np.random.choice(["Andamiaje","Sustituto"], n_muestra_input, p=[0.65,0.35]),
+        "Analisis": np.random.normal(3.8,0.5,n_muestra_input).clip(1,5),
+        "Evaluacion": np.random.normal(3.2,0.6,n_muestra_input).clip(1,5),
+        "Autorregulacion": np.random.normal(3.5,0.4,n_muestra_input).clip(1,5),
+        "Inferencia": np.random.normal(3.9,0.3,n_muestra_input).clip(1,5)
     })
 
-datos = st.session_state.datos_estudio
+datos = st.session_state.main_data
 habilidades = ["Analisis", "Evaluacion", "Autorregulacion", "Inferencia"]
 
 # ------------------------------------------------
@@ -156,6 +169,7 @@ with tab4:
         "IC Superior": promedios.values + error.values
     })
 
+    # Formateo de tabla 100% en el idioma seleccionado
     st.dataframe(
         df_ic.style.format(precision=4)
         .bar(subset=['Media'], color='#BEE3DB', vmin=1, vmax=5)
@@ -171,41 +185,42 @@ with tab4:
     st.text(f"{'Coefficiente R²' if sel_idioma=='Italiano' else 'Coeficiente R²'}: {modelo.rsquared:.4f}")
     
     st.subheader(lang["dispersion"])
+    # Etiquetas del gráfico según idioma
+    labels_graf = {"Analisis": "Análisis" if sel_idioma=="Español" else "Analisi", 
+                   "Indice_PC": "Pensamiento Crítico" if sel_idioma=="Español" else "Pensiero Critico",
+                   "Uso_IA": "Uso IA"}
+    
     fig_disp = px.scatter(datos, x="Analisis", y="Indice_PC", color="Uso_IA", 
-                          trendline="ols", color_discrete_sequence=['#BEE3DB', '#FFD8BE'])
+                          trendline="ols", labels=labels_graf, color_discrete_sequence=['#BEE3DB', '#FFD8BE'])
     st.plotly_chart(fig_disp, use_container_width=True)
 
 with tab5:
     st.header(f"💡 {lang['tabs'][4]}")
-    with st.expander("👨‍🏫 Para Docentes / Per i docenti", expanded=True):
-        st.write("- Fomentar el uso de IA como **andamiaje cognitivo**." if sel_idioma=="Español" else "- Incoraggiare l'uso dell'IA come **impalcatura cognitiva**.")
-    with st.expander("🎓 Para Estudiantes / Per gli studenti"):
-        st.write("- Contrastar resultados de IA con fuentes académicas." if sel_idioma=="Español" else "- Confrontare i risultati dell'IA con fonti accademiche.")
+    with st.expander(lang["guia_doc"], expanded=True):
+        st.write(lang["txt_doc"])
+    with st.expander(lang["guia_est"]):
+        st.write(lang["txt_est"])
+    with st.expander(lang["guia_ins"]):
+        st.write(lang["txt_ins"])
 
 st.divider()
 st.header(lang["encuesta"])
-# --- FORMULARIO QUE SÍ HACE ALGO ---
 with st.form("encuesta"):
-    u_sel = st.selectbox(lang["m_and"] if sel_idioma=="Italiano" else "Modo de uso", ["Andamiaje", "Sustituto"])
-    # Agregamos inputs para que el usuario sienta que ingresa datos reales
-    st.write("Simular puntajes (1-5):")
-    c_f1, c_f2 = st.columns(2)
-    val_an = c_f1.slider("Análisis", 1.0, 5.0, 4.0)
-    val_ev = c_f2.slider("Evaluación", 1.0, 5.0, 3.5)
-
+    u_sel = st.selectbox(lang["modo_uso"], [lang["m_and"], lang["m_sus"]])
     if st.form_submit_button(lang["btn_reg"]):
-        # Creamos una nueva fila de datos
-        nueva_fila = pd.DataFrame({
-            "Uso_IA": [u_sel],
-            "Analisis": [val_an],
-            "Evaluacion": [val_ev],
-            "Autorregulacion": [np.random.normal(3.5, 0.4)],
-            "Inferencia": [np.random.normal(3.9, 0.3)]
+        # Mapear selección de vuelta a la clave original
+        val_uso = "Andamiaje" if u_sel in ["Andamiaje", "Impalcatura"] else "Sustituto"
+        
+        nuevo_dato = pd.DataFrame({
+            "Uso_IA": [val_uso],
+            "Analisis": [np.random.normal(4.0, 0.4)],
+            "Evaluacion": [np.random.normal(3.5, 0.5)],
+            "Autorregulacion": [np.random.normal(3.8, 0.3)],
+            "Inferencia": [np.random.normal(4.1, 0.2)]
         })
-        # La añadimos a la sesión
-        st.session_state.datos_estudio = pd.concat([st.session_state.datos_estudio, nueva_fila], ignore_index=True)
+        st.session_state.main_data = pd.concat([st.session_state.main_data, nuevo_dato], ignore_index=True)
         st.balloons()
         st.success(lang["exito"])
-        st.rerun() # Esto hace que se recarguen las gráficas con el nuevo dato
+        st.rerun()
 
 st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_unemi.csv", "text/csv")
