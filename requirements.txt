@@ -4,4 +4,6 @@ numpy
 plotly
 statsmodels
 scikit-learn
+scipy
+google-generativeai
 reportlab
