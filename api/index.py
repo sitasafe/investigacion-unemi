@@ -2,9 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
+from scipy import stats
 
 # ------------------------------------------------
 # DICCIONARIO DE TRADUCCIÓN COMPLETO
@@ -43,7 +45,7 @@ idiomas = {
         "equipo": "👥 Team di Ricerca",
         "config": "⚙️ Impostazioni",
         "muestra": "Dimensione del campione",
-        "tabs": ["📂 Prodotto", "📊 Diagnosi", "🧠 Mappatura", "📉 Statistica", "💡 Guida"],
+        "tabs": ["📂 Prodotto", "📊 Diagnosi", "Mappatura", "Statistica", "Guida"],
         "obj": "Obiettivo: Analizzare la relazione tra IAGen e Pensiero Critico in UNEMI.",
         "m_est": "Studenti",
         "m_and": "Impalcatura",
@@ -131,9 +133,10 @@ if 'main_data' not in st.session_state:
 
 datos = st.session_state.main_data
 habilidades = ["Analisis", "Evaluacion", "Autorregulacion", "Inferencia"]
+promedios = datos[habilidades].mean()
 
 # ------------------------------------------------
-# TABS (UN SOLO ICONO POR PESTAÑA)
+# TABS
 # ------------------------------------------------
 tab1, tab2, tab3, tab4, tab5 = st.tabs(lang["tabs"])
 
@@ -141,9 +144,28 @@ with tab1:
     st.header(lang["tabs"][0])
     st.write(f"{'Relazione Accademica' if sel_idioma=='Italiano' else 'Informe Académico'} estructurado bajo normas **APA 7ma edición**.")
     st.info(lang["obj"])
+    
+    # 3️⃣ METODOLOGÍA DE INVESTIGACIÓN
+    st.subheader("📝 Metodología")
+    st.markdown("""
+    **Tipo de estudio:** Cuantitativo exploratorio  
+    **Diseño:** No experimental transversal  
+    **Muestra:** Estudiantes universitarios (n variable)  
+    **Instrumento:** Escala Likert 1-5  
+    **Variables:**
+    - Uso de IA generativa (Variable Independiente)
+    - Pensamiento crítico (Variable Dependiente: Análisis, Evaluación, Autorregulación, Inferencia)
+    """)
 
 with tab2:
     st.header(lang["tabs"][1])
+    
+    # 5️⃣ CALIDAD DE SOFTWARE - VALIDACIÓN
+    st.subheader("🔎 Validación de Datos")
+    st.write("Valores mínimos y máximos detectados (Control de Calidad):")
+    st.dataframe(datos[habilidades].describe().T)
+    
+    st.divider()
     uso = datos["Uso_IA"].value_counts(normalize=True)*100
     c1, c2, c3 = st.columns(3)
     c1.metric(lang["m_est"], len(datos))
@@ -154,14 +176,44 @@ with tab2:
 
 with tab3:
     st.header(lang["tabs"][2])
-    promedios = datos[habilidades].mean()
-    df_bloom = pd.DataFrame({"Habilidad": habilidades, "Promedio": promedios.values})
-    fig_bar = px.bar(df_bloom, x="Habilidad", y="Promedio", color="Promedio", color_continuous_scale='Teal')
-    st.plotly_chart(fig_bar, use_container_width=True)
+    
+    col_rad1, col_rad2 = st.columns(2)
+    
+    with col_rad1:
+        # GRÁFICO DE BARRAS ORIGINAL
+        df_bloom = pd.DataFrame({"Habilidad": habilidades, "Promedio": promedios.values})
+        fig_bar = px.bar(df_bloom, x="Habilidad", y="Promedio", color="Promedio", color_continuous_scale='Teal')
+        st.plotly_chart(fig_bar, use_container_width=True)
+    
+    with col_rad2:
+        # 2️⃣ RADAR DEL PENSAMIENTO CRÍTICO
+        st.subheader("🧠 Perfil de Pensamiento Crítico")
+        fig_radar = go.Figure()
+        fig_radar.add_trace(go.Scatterpolar(
+            r=promedios.values,
+            theta=habilidades,
+            fill='toself',
+            name='Promedio',
+            fillcolor='rgba(190, 227, 219, 0.6)',
+            line=dict(color='#BEE3DB')
+        ))
+        fig_radar.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[1,5])),
+            showlegend=False
+        )
+        st.plotly_chart(fig_radar, use_container_width=True)
 
 with tab4:
     st.header(lang["tabs"][3])
-    st.subheader("Intervalos de Confianza (95%)" if sel_idioma=="Español" else "Intervalli di confidenza (95%)")
+    
+    # MATRIZ DE CORRELACIÓN
+    st.subheader("🔢 Matriz de Correlación de Pearson")
+    corr_matrix = datos[habilidades].corr()
+    fig_corr = px.imshow(corr_matrix, text_auto=True, color_continuous_scale='RdBu_r', range_color=[-1,1])
+    st.plotly_chart(fig_corr, use_container_width=True)
+    
+    st.divider()
+    st.subheader("Intervalos de Confianza (95%)")
     std = datos[habilidades].std()
     error = 1.96*(std/np.sqrt(len(datos)))
     df_ic = pd.DataFrame({
@@ -170,16 +222,42 @@ with tab4:
         "IC Inferior": promedios.values - error.values, 
         "IC Superior": promedios.values + error.values
     })
-    st.dataframe(df_ic.style.format(precision=4).bar(subset=['Media'], color='#BEE3DB', vmin=1, vmax=5).highlight_max(subset=['Media'], color='#FFD8BE'), use_container_width=True)
+    st.dataframe(df_ic.style.format(precision=4).bar(subset=['Media'], color='#BEE3DB', vmin=1, vmax=5), use_container_width=True)
+
+    # T-TEST (PRUEBA DE HIPÓTESIS)
+    st.subheader("🧪 Prueba de Hipótesis (T-Test)")
+    andamiaje_vals = datos[datos["Uso_IA"] == "Andamiaje"][habilidades].mean(axis=1)
+    sustituto_vals = datos[datos["Uso_IA"] == "Sustituto"][habilidades].mean(axis=1)
+    t_stat, p_val = stats.ttest_ind(andamiaje_vals, sustituto_vals)
+    
+    col_t1, col_t2 = st.columns(2)
+    col_t1.metric("Estadístico t", round(t_stat, 4))
+    col_t2.metric("P-Valor", round(p_val, 4))
+    
+    if p_val < 0.05:
+        st.success("✅ Diferencia estadísticamente significativa detectada entre grupos.")
+    else:
+        st.warning("⚠️ No hay evidencia suficiente para diferenciar los grupos.")
+
+    st.divider()
     st.subheader(lang["regresion"])
     datos["Indice_PC"] = datos[habilidades].mean(axis=1)
     datos["Uso_IA_bin"] = datos["Uso_IA"].map({"Andamiaje":1, "Sustituto":0})
     X = sm.add_constant(datos["Uso_IA_bin"])
     modelo = sm.OLS(datos["Indice_PC"], X).fit()
-    st.text(f"{'Coefficiente R²' if sel_idioma=='Italiano' else 'Coeficiente R²'}: {modelo.rsquared:.4f}")
+    st.text(f"Coeficiente R²: {modelo.rsquared:.4f}")
+    
+    # 4️⃣ INTERPRETACIÓN AUTOMÁTICA DEL MODELO
+    st.subheader("📘 Interpretación del Modelo")
+    if modelo.rsquared > 0.5:
+        st.success("El modelo muestra una relación fuerte entre el uso de IA y el pensamiento crítico.")
+    elif modelo.rsquared > 0.2:
+        st.info("El modelo muestra una relación moderada.")
+    else:
+        st.warning("El modelo muestra una relación débil (la IA explica poco de la varianza del pensamiento crítico).")
+    
     st.subheader(lang["dispersion"])
-    labels_graf = {"Analisis": "Análisis" if sel_idioma=="Español" else "Analisi", "Indice_PC": "Pensamiento Crítico" if sel_idioma=="Español" else "Pensiero Critico", "Uso_IA": "Uso IA"}
-    fig_disp = px.scatter(datos, x="Analisis", y="Indice_PC", color="Uso_IA", trendline="ols", labels=labels_graf, color_discrete_sequence=['#BEE3DB', '#FFD8BE'])
+    fig_disp = px.scatter(datos, x="Analisis", y="Indice_PC", color="Uso_IA", trendline="ols", color_discrete_sequence=['#BEE3DB', '#FFD8BE'])
     st.plotly_chart(fig_disp, use_container_width=True)
 
 with tab5:
@@ -208,10 +286,10 @@ with st.form("encuesta"):
         st.session_state.main_data = pd.concat([st.session_state.main_data, nuevo_dato], ignore_index=True)
         st.rerun()
 
-st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_unemi.csv", "text/csv")
+st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_unemi_profesional.csv", "text/csv")
 
 # ------------------------------------------------
-# PIE DE PÁGINA (CON CAPTION UNIFICADO)
+# PIE DE PÁGINA FINAL
 # ------------------------------------------------
 st.divider()
 st.caption("""
