@@ -24,9 +24,9 @@ idiomas = {
         "m_sus": "Sustituto",
         "regresion": "🤖 Modelo de Regresión",
         "dispersion": "🎯 Gráfico de Correlación",
-        "encuesta": "📝 Simulación de Encuesta",
-        "btn_reg": "Registrar",
-        "exito": "¡Datos enviados con éxito!",
+        "encuesta": "📝 Simulación de Encuesta (Registro Dinámico)",
+        "btn_reg": "Registrar y Actualizar Datos",
+        "exito": "¡Datos enviados y estadísticas actualizadas!",
         "descarga": "📥 Descargar Base CSV"
     },
     "Italiano": {
@@ -44,8 +44,8 @@ idiomas = {
         "regresion": "🤖 Modello di Regressione",
         "dispersion": "🎯 Grafico di Correlazione",
         "encuesta": "📝 Simulazione di Sondaggio",
-        "btn_reg": "Registrare",
-        "exito": "Dati inviati con successo!",
+        "btn_reg": "Registrare e aggiornare",
+        "exito": "Dati inviati e statistiche aggiornate!",
         "descarga": "📥 Scarica il database CSV"
     }
 }
@@ -55,7 +55,6 @@ idiomas = {
 # ------------------------------------------------
 st.set_page_config(page_title="Investigación UNEMI", layout="wide")
 
-# Selector de idioma
 with st.sidebar:
     st.header("🌐 Lingua")
     sel_idioma = st.radio("Seleccione Idioma / Scegli la lingua", ["Español", "Italiano"], horizontal=True)
@@ -72,9 +71,6 @@ st.markdown("""
         margin-bottom: 8px;
         box-shadow: 1px 1px 5px rgba(0,0,0,0.05);
     }
-    @media (max-width: 600px) {
-        .stMetric { font-size: 0.8rem; }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -83,10 +79,7 @@ st.markdown("""
 # ------------------------------------------------
 st.title(lang["titulo"])
 st.subheader(lang["sub"])
-
-st.markdown(f"""
-**🎓 Maestría en Educación UNEMI** | **👨‍🏫 {lang['tutor']}:** Bonisoli Lorenzo PhD. | **📅 Fecha:** 07/03/2026
-""")
+st.markdown(f"**🎓 Maestría en Educación UNEMI** | **👨‍🏫 {lang['tutor']}:** Bonisoli Lorenzo PhD. | **📅 Fecha:** 07/03/2026")
 
 st.write(f"### {lang['equipo']}")
 c_i1, c_i2, c_i3 = st.columns(3)
@@ -102,25 +95,24 @@ with c_i3:
 st.divider()
 
 # ------------------------------------------------
-# LÓGICA DE DATOS (ORIGINAL RESTAURADA)
+# LÓGICA DE DATOS DINÁMICA
 # ------------------------------------------------
 with st.sidebar:
     st.header(lang["config"])
-    n_muestra = st.slider(lang["muestra"], 50, 500, 100)
+    n_muestra_inicial = st.slider(lang["muestra"], 50, 500, 100)
 
-@st.cache_data
-def generar_datos(n):
+# Usamos session_state para que los datos no se borren al hacer clic en botones
+if 'datos_estudio' not in st.session_state:
     np.random.seed(42)
-    df = pd.DataFrame({
-        "Uso_IA": np.random.choice(["Andamiaje","Sustituto"], n, p=[0.65,0.35]),
-        "Analisis": np.random.normal(3.8,0.5,n).clip(1,5),
-        "Evaluacion": np.random.normal(3.2,0.6,n).clip(1,5),
-        "Autorregulacion": np.random.normal(3.5,0.4,n).clip(1,5),
-        "Inferencia": np.random.normal(3.9,0.3,n).clip(1,5)
+    st.session_state.datos_estudio = pd.DataFrame({
+        "Uso_IA": np.random.choice(["Andamiaje","Sustituto"], n_muestra_inicial, p=[0.65,0.35]),
+        "Analisis": np.random.normal(3.8,0.5,n_muestra_inicial).clip(1,5),
+        "Evaluacion": np.random.normal(3.2,0.6,n_muestra_inicial).clip(1,5),
+        "Autorregulacion": np.random.normal(3.5,0.4,n_muestra_inicial).clip(1,5),
+        "Inferencia": np.random.normal(3.9,0.3,n_muestra_inicial).clip(1,5)
     })
-    return df
 
-datos = generar_datos(n_muestra)
+datos = st.session_state.datos_estudio
 habilidades = ["Analisis", "Evaluacion", "Autorregulacion", "Inferencia"]
 
 # ------------------------------------------------
@@ -137,7 +129,7 @@ with tab2:
     st.header(f"📈 {lang['tabs'][1]}")
     uso = datos["Uso_IA"].value_counts(normalize=True)*100
     c1, c2, c3 = st.columns(3)
-    c1.metric(lang["m_est"], n_muestra)
+    c1.metric(lang["m_est"], len(datos))
     c2.metric(lang["m_and"], f"{uso.get('Andamiaje',0):.1f}%")
     c3.metric(lang["m_sus"], f"{uso.get('Sustituto',0):.1f}%", delta_color="inverse")
     
@@ -156,7 +148,7 @@ with tab4:
     st.subheader("Intervalos de Confianza (95%)" if sel_idioma=="Español" else "Intervalli di confidenza (95%)")
     
     std = datos[habilidades].std()
-    error = 1.96*(std/np.sqrt(n_muestra))
+    error = 1.96*(std/np.sqrt(len(datos)))
     df_ic = pd.DataFrame({
         "Habilidad": habilidades, 
         "Media": promedios.values, 
@@ -178,13 +170,10 @@ with tab4:
     modelo = sm.OLS(datos["Indice_PC"], X).fit()
     st.text(f"{'Coefficiente R²' if sel_idioma=='Italiano' else 'Coeficiente R²'}: {modelo.rsquared:.4f}")
     
-    # AGREGADO: GRÁFICO DE DISPERSIÓN (Sin alterar tus datos)
     st.subheader(lang["dispersion"])
     fig_disp = px.scatter(datos, x="Analisis", y="Indice_PC", color="Uso_IA", 
                           trendline="ols", color_discrete_sequence=['#BEE3DB', '#FFD8BE'])
     st.plotly_chart(fig_disp, use_container_width=True)
-    
-    st.toast("Updated / Aggiornato", icon="📈")
 
 with tab5:
     st.header(f"💡 {lang['tabs'][4]}")
@@ -192,15 +181,31 @@ with tab5:
         st.write("- Fomentar el uso de IA como **andamiaje cognitivo**." if sel_idioma=="Español" else "- Incoraggiare l'uso dell'IA come **impalcatura cognitiva**.")
     with st.expander("🎓 Para Estudiantes / Per gli studenti"):
         st.write("- Contrastar resultados de IA con fuentes académicas." if sel_idioma=="Español" else "- Confrontare i risultati dell'IA con fonti accademiche.")
-    with st.expander("🏛️ Para Instituciones / Per le istituzioni"):
-        st.write("- Crear políticas de integridad académica." if sel_idioma=="Español" else "- Creare politiche di integrità accademica.")
 
 st.divider()
 st.header(lang["encuesta"])
+# --- FORMULARIO QUE SÍ HACE ALGO ---
 with st.form("encuesta"):
     u_sel = st.selectbox(lang["m_and"] if sel_idioma=="Italiano" else "Modo de uso", ["Andamiaje", "Sustituto"])
+    # Agregamos inputs para que el usuario sienta que ingresa datos reales
+    st.write("Simular puntajes (1-5):")
+    c_f1, c_f2 = st.columns(2)
+    val_an = c_f1.slider("Análisis", 1.0, 5.0, 4.0)
+    val_ev = c_f2.slider("Evaluación", 1.0, 5.0, 3.5)
+
     if st.form_submit_button(lang["btn_reg"]):
+        # Creamos una nueva fila de datos
+        nueva_fila = pd.DataFrame({
+            "Uso_IA": [u_sel],
+            "Analisis": [val_an],
+            "Evaluacion": [val_ev],
+            "Autorregulacion": [np.random.normal(3.5, 0.4)],
+            "Inferencia": [np.random.normal(3.9, 0.3)]
+        })
+        # La añadimos a la sesión
+        st.session_state.datos_estudio = pd.concat([st.session_state.datos_estudio, nueva_fila], ignore_index=True)
         st.balloons()
         st.success(lang["exito"])
+        st.rerun() # Esto hace que se recarguen las gráficas con el nuevo dato
 
 st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_unemi.csv", "text/csv")
