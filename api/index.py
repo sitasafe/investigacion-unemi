@@ -47,7 +47,7 @@ def obtener_explicacion_ia(df_stats, r2):
         return f"Nota: La IA está procesando otros datos. ({str(e)})"
 
 # ------------------------------------------------
-# 2. DICCIONARIO DE TRADUCCIÓN
+# 2. DICCIONARIO DE TRADUCCIÓN (CORREGIDO)
 # ------------------------------------------------
 idiomas = {
     "Español": {
@@ -81,4 +81,138 @@ idiomas = {
         "sub": "Impatto dell'Intelligenza Artificiale Generativa sul Pensiero Critico",
         "tutor": "Tutore",
         "equipo": "👥 Team di Ricerca",
-        "config": "⚙️
+        "config": "⚙️ Impostazioni",
+        "muestra": "Dimensione del campione",
+        "tabs": ["📂 Prodotto", "📊 Diagnosi", "🧠 Mappatura", "📉 Statistica", "💡 Guida"],
+        "obj": "Obiettivo: Analizzare la relazione tra IAGen e Pensiero Critico in UNEMI.",
+        "m_est": "Studenti",
+        "m_and": "Impalcatura",
+        "m_sus": "Sostituto",
+        "regresion": "🤖 Modello di Regressione",
+        "dispersion": "🎯 Grafico di Correlazione",
+        "encuesta": "📝 Simulazione di Sondaggio",
+        "btn_reg": "Registrare e Aggiornare",
+        "exito": "Dati inviati con successo!",
+        "descarga": "📥 Scarica il database CSV",
+        "modo_uso": "Modalità d'uso",
+        "guia_doc": "👨‍🏫 Per i docenti",
+        "guia_est": "🎓 Per gli studenti",
+        "guia_ins": "🏛️ Per le istituzioni",
+        "txt_doc": "- Incoraggiare l'uso dell'IA como **impalcatura cognitiva**.",
+        "txt_est": "- Confrontare i risultati dell'IA con fonti accademiche.",
+        "txt_ins": "- Creare politiche di integrità accademica e etica digitale."
+    }
+}
+
+# ------------------------------------------------
+# 3. CONFIGURACIÓN Y ESTILO
+# ------------------------------------------------
+st.set_page_config(page_title="Investigación UNEMI", layout="wide")
+
+if st.session_state.get('lanzar_globos'):
+    st.balloons()
+    st.session_state.lanzar_globos = False
+
+with st.sidebar:
+    st.header("🌐 Lingua")
+    sel_idioma = st.radio("Seleccione Idioma", ["Español", "Italiano"], horizontal=True)
+    lang = idiomas[sel_idioma]
+
+st.markdown("""
+<style>
+    .stApp { background-color: #FDFCF0; }
+    .integrante-card {
+        background-color: #FFFFFF; padding: 10px; border-radius: 8px; 
+        border-left: 5px solid #BEE3DB; margin-bottom: 8px;
+    }
+    .ia-box {
+        background-color: #E8F0FE; padding: 20px; border-radius: 10px;
+        border-left: 5px solid #4285F4; margin: 10px 0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------------------------------------
+# 4. MANEJO DE DATOS
+# ------------------------------------------------
+with st.sidebar:
+    st.header(lang["config"])
+    n_muestra_input = st.slider(lang["muestra"], 50, 500, 100)
+
+if 'main_data' not in st.session_state or len(st.session_state.main_data) != n_muestra_input:
+    st.session_state.main_data = generar_datos(n_muestra_input)
+
+datos = st.session_state.main_data
+habilidades = ["Analisis", "Evaluacion", "Autorregulacion", "Inferencia"]
+promedios = datos[habilidades].mean()
+
+# ------------------------------------------------
+# 5. INTERFAZ
+# ------------------------------------------------
+st.title(lang["titulo"])
+st.subheader(lang["sub"])
+st.markdown(f"**🎓 Maestría** | **👨‍🏫 {lang['tutor']}:** Bonisoli Lorenzo PhD. | **📅 07/03/2026**")
+
+st.write(f"### {lang['equipo']}")
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.markdown('<div class="integrante-card">👨‍💻 Willan Efrén Álvarez Carmona</div>', unsafe_allow_html=True)
+    st.markdown('<div class="integrante-card">👩‍🏫 Tania Jacqueline Barcos Villalva</div>', unsafe_allow_html=True)
+with col2:
+    st.markdown('<div class="integrante-card">👩‍🔬 Selene Anaís Guagua Valencia</div>', unsafe_allow_html=True)
+    st.markdown('<div class="integrante-card">👨‍💼 Pedro Javier Figueroa Vergara</div>', unsafe_allow_html=True)
+with col3:
+    st.markdown('<div class="integrante-card">👩‍🎓 Nohemí Nicole Miranda Jiménez</div>', unsafe_allow_html=True)
+
+st.divider()
+
+tab1, tab2, tab3, tab4, tab5 = st.tabs(lang["tabs"])
+
+with tab1:
+    st.header(lang["tabs"][0])
+    st.info(lang["obj"])
+
+with tab2:
+    st.header(lang["tabs"][1])
+    st.dataframe(datos[habilidades].describe().T)
+    st.divider()
+    uso = datos["Uso_IA"].value_counts(normalize=True)*100
+    c1, c2, c3 = st.columns(3)
+    c1.metric(lang["m_est"], len(datos))
+    c2.metric(lang["m_and"], f"{uso.get('Andamiaje',0):.1f}%")
+    c3.metric(lang["m_sus"], f"{uso.get('Sustituto',0):.1f}%")
+    st.plotly_chart(px.pie(names=uso.index, values=uso.values, hole=0.4), use_container_width=True)
+
+with tab3:
+    st.header(lang["tabs"][2])
+    st.plotly_chart(px.bar(pd.DataFrame({"Hab": habilidades, "Prom": promedios.values}), x="Hab", y="Prom", color="Prom"), use_container_width=True)
+
+with tab4:
+    st.header(lang["tabs"][3])
+    datos["Indice_PC"] = datos[habilidades].mean(axis=1)
+    datos["Uso_IA_bin"] = datos["Uso_IA"].map({"Andamiaje":1, "Sustituto":0})
+    modelo = sm.OLS(datos["Indice_PC"], sm.add_constant(datos["Uso_IA_bin"])).fit()
+    
+    st.subheader("🤖 Interpretación con IA")
+    if st.button("Generar Análisis con IA"):
+        with st.spinner("Analizando..."):
+            explicacion = obtener_explicacion_ia(promedios, modelo.rsquared)
+            st.markdown(f'<div class="ia-box">{explicacion}</div>', unsafe_allow_html=True)
+    
+    st.divider()
+    st.metric("Coeficiente R²", f"{modelo.rsquared:.4f}")
+
+with tab5:
+    st.header(lang["tabs"][4])
+    for g in ["guia_doc", "guia_est", "guia_ins"]:
+        with st.expander(lang[g]): st.write(lang["txt_" + g.split('_')[1]])
+
+st.divider()
+st.header(lang["encuesta"])
+with st.form("encuesta"):
+    u_sel = st.selectbox(lang["modo_uso"], [lang["m_and"], lang["m_sus"]])
+    if st.form_submit_button(lang["btn_reg"]):
+        st.session_state.lanzar_globos = True
+        st.rerun()
+
+st.caption("Developed by Ing. Willan E. Álvarez C. - UNEMI")
