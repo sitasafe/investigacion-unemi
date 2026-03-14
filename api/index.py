@@ -69,7 +69,6 @@ idiomas = {
 # ------------------------------------------------
 st.set_page_config(page_title="Investigación UNEMI", layout="wide")
 
-# Lógica para mostrar globos después del rerun
 if st.session_state.get('lanzar_globos'):
     st.balloons()
     st.session_state.lanzar_globos = False
@@ -134,17 +133,17 @@ datos = st.session_state.main_data
 habilidades = ["Analisis", "Evaluacion", "Autorregulacion", "Inferencia"]
 
 # ------------------------------------------------
-# TABS
+# TABS (UN SOLO ICONO POR PESTAÑA)
 # ------------------------------------------------
 tab1, tab2, tab3, tab4, tab5 = st.tabs(lang["tabs"])
 
 with tab1:
-    st.header(f"📄 {lang['tabs'][0]}")
+    st.header(lang["tabs"][0])
     st.write(f"{'Relazione Accademica' if sel_idioma=='Italiano' else 'Informe Académico'} estructurado bajo normas **APA 7ma edición**.")
     st.info(lang["obj"])
 
 with tab2:
-    st.header(f"📈 {lang['tabs'][1]}")
+    st.header(lang["tabs"][1])
     uso = datos["Uso_IA"].value_counts(normalize=True)*100
     c1, c2, c3 = st.columns(3)
     c1.metric(lang["m_est"], len(datos))
@@ -154,14 +153,14 @@ with tab2:
     st.plotly_chart(fig_pie, use_container_width=True)
 
 with tab3:
-    st.header(f"🧠 {lang['tabs'][2]}")
+    st.header(lang["tabs"][2])
     promedios = datos[habilidades].mean()
     df_bloom = pd.DataFrame({"Habilidad": habilidades, "Promedio": promedios.values})
     fig_bar = px.bar(df_bloom, x="Habilidad", y="Promedio", color="Promedio", color_continuous_scale='Teal')
     st.plotly_chart(fig_bar, use_container_width=True)
 
 with tab4:
-    st.header(f"🔍 {lang['tabs'][3]}")
+    st.header(lang["tabs"][3])
     st.subheader("Intervalos de Confianza (95%)" if sel_idioma=="Español" else "Intervalli di confidenza (95%)")
     std = datos[habilidades].std()
     error = 1.96*(std/np.sqrt(len(datos)))
@@ -184,7 +183,7 @@ with tab4:
     st.plotly_chart(fig_disp, use_container_width=True)
 
 with tab5:
-    st.header(f"💡 {lang['tabs'][4]}")
+    st.header(lang["tabs"][4])
     with st.expander(lang["guia_doc"], expanded=True):
         st.write(lang["txt_doc"])
     with st.expander(lang["guia_est"]):
@@ -212,11 +211,11 @@ with st.form("encuesta"):
 st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_unemi.csv", "text/csv")
 
 # ------------------------------------------------
-# PIE DE PÁGINA ACTUALIZADO
+# PIE DE PÁGINA (CON CAPTION UNIFICADO)
 # ------------------------------------------------
 st.divider()
 st.caption("""
 Research Data Analytics System  
-Developed by Ing. Willan E. Álvarez C.
+Developed by Ing. Willan E. Álvarez C.  
 Maestría en Educación mención en Docencia e Investigación en Educación Superior – Universidad Estatal de Milagro
 """)
