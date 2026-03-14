@@ -7,15 +7,13 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
 from scipy import stats
-import google.generativeai as genai  # <--- NUEVA LIBRERÍA
+import google.generativeai as genai
 
 # ------------------------------------------------
 # CONFIGURACIÓN DE GEMINI (IA)
 # ------------------------------------------------
-API_KEY = "AIzaSyC3XWlImuVEFuqo5p0H0FjcKX0n5XmlF1E" 
+API_KEY = "AIzaSyC3XWlImuVEFuqo5p0H0FjcKX0n5XmlF1E"
 genai.configure(api_key=API_KEY)
-
-# Usamos el nombre de modelo más compatible
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 # ------------------------------------------------
@@ -23,7 +21,6 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 # ------------------------------------------------
 @st.cache_data
 def generar_datos(n):
-    """Genera la base de datos simulada con caché para optimizar rendimiento."""
     np.random.seed(42)
     return pd.DataFrame({
         "Uso_IA": np.random.choice(["Andamiaje","Sustituto"], n, p=[0.65,0.35]),
@@ -34,26 +31,20 @@ def generar_datos(n):
     })
 
 def obtener_explicacion_ia(df_stats, r2):
-    """Usa Gemini para interpretar los datos estadísticos."""
     try:
-        # Forzamos la configuración dentro por si acaso el servidor la pierde
-        genai.configure(api_key=API_KEY)
-        # Intentamos con el modelo flash estándar
-        model_env = genai.GenerativeModel('gemini-1.5-flash')
-        
         prompt = f"""
-        Actúa como un experto en estadística educativa. 
-        Analiza estos datos de una investigación en la UNEMI sobre IA y Pensamiento Crítico:
-        - Promedios por habilidad: {df_stats.to_string()}
-        - Coeficiente R2 del modelo: {r2:.4f}
+        Actúa como un experto en estadística educativa de la UNEMI. 
+        Analiza estos datos sobre IA y Pensamiento Crítico:
+        - Promedios por habilidad: {df_stats.to_dict()}
+        - Coeficiente R2: {r2:.4f}
         
         Dame una conclusión breve (máximo 3 párrafos) sobre si la IA está ayudando 
         al pensamiento crítico o si actúa como un sustituto. Sé muy profesional.
         """
-        response = model_env.generate_content(prompt)
+        response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"Error técnico con Gemini: {str(e)}. Intenta de nuevo en unos segundos."
+        return f"Nota: La IA está procesando otros datos. ({str(e)})"
 
 # ------------------------------------------------
 # 2. DICCIONARIO DE TRADUCCIÓN
@@ -90,111 +81,4 @@ idiomas = {
         "sub": "Impatto dell'Intelligenza Artificiale Generativa sul Pensiero Critico",
         "tutor": "Tutore",
         "equipo": "👥 Team di Ricerca",
-        "config": "⚙️ Impostazioni",
-        "muestra": "Dimensione del campione",
-        "tabs": ["📂 Prodotto", "📊 Diagnosi", "🧠 Mappatura", "📉 Statistica", "💡 Guida"],
-        "obj": "Objetivo: Analizzare la relazione tra IAGen e Pensiero Critico in UNEMI.",
-        "m_est": "Studenti",
-        "m_and": "Impalcatura",
-        "m_sus": "Sostituto",
-        "regresion": "🤖 Modello di Regressione",
-        "dispersion": "🎯 Grafico di Correlazione",
-        "encuesta": "📝 Simulazione di Sondaggio",
-        "btn_reg": "Registrare e Aggiornare",
-        "exito": "Dati inviati con successo!",
-        "descarga": "📥 Scarica il database CSV",
-        "modo_uso": "Modalità d'uso",
-        "guia_doc": "👨‍🏫 Per i docenti",
-        "guia_est": "🎓 Per gli studenti",
-        "guia_ins": "🏛️ Per le istituzioni",
-        "txt_doc": "- Incoraggiare l'uso dell'IA como **impalcatura cognitiva**.",
-        "txt_est": "- Confrontare i risultati dell'IA con fonti accademiche.",
-        "txt_ins": "- Creare politiche di integrità accademica e etica digitale."
-    }
-}
-
-# ------------------------------------------------
-# 3. CONFIGURACIÓN Y ESTILO
-# ------------------------------------------------
-st.set_page_config(page_title="Investigación UNEMI", layout="wide")
-
-if st.session_state.get('lanzar_globos'):
-    st.balloons()
-    st.session_state.lanzar_globos = False
-
-with st.sidebar:
-    st.header("🌐 Lingua")
-    sel_idioma = st.radio("Seleccione Idioma / Scegli la lingua", ["Español", "Italiano"], horizontal=True)
-    lang = idiomas[sel_idioma]
-
-st.markdown("""
-<style>
-    .stApp { background-color: #FDFCF0; }
-    .integrante-card {
-        background-color: #FFFFFF;
-        padding: 10px; border-radius: 8px; border-left: 5px solid #BEE3DB;
-        margin-bottom: 8px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);
-    }
-    .ia-box {
-        background-color: #E8F0FE;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #4285F4;
-        margin: 10px 0;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ------------------------------------------------
-# 4. MANEJO DE DATOS (ESTADO DE SESIÓN)
-# ------------------------------------------------
-with st.sidebar:
-    st.header(lang["config"])
-    n_muestra_input = st.slider(lang["muestra"], 50, 500, 100)
-
-if 'main_data' not in st.session_state or len(st.session_state.main_data) != n_muestra_input:
-    st.session_state.main_data = generar_datos(n_muestra_input)
-
-datos = st.session_state.main_data
-habilidades = ["Analisis", "Evaluacion", "Autorregulacion", "Inferencia"]
-promedios = datos[habilidades].mean()
-
-# ------------------------------------------------
-# 5. INTERFAZ DE USUARIO (PORTADA Y TABS)
-# ------------------------------------------------
-st.title(lang["titulo"])
-st.subheader(lang["sub"])
-st.markdown(f"**🎓 Maestría en Educación mención en Docencia e Investigación en Educación Superior** | **👨‍🏫 {lang['tutor']}:** Bonisoli Lorenzo PhD. | **📅 Fecha:** 07/03/2026")
-
-st.write(f"### {lang['equipo']}")
-c_i1, c_i2, c_i3 = st.columns(3)
-with c_i1:
-    st.markdown('<div class="integrante-card">👨‍💻 Willan Efrén Álvarez Carmona</div>', unsafe_allow_html=True)
-    st.markdown('<div class="integrante-card">👩‍🏫 Tania Jacqueline Barcos Villalva</div>', unsafe_allow_html=True)
-with c_i2:
-    st.markdown('<div class="integrante-card">👩‍🔬 Selene Anaís Guagua Valencia</div>', unsafe_allow_html=True)
-    st.markdown('<div class="integrante-card">👨‍💼 Pedro Javier Figueroa Vergara</div>', unsafe_allow_html=True)
-with c_i3:
-    st.markdown('<div class="integrante-card">👩‍🎓 Nohemí Nicole Miranda Jiménez</div>', unsafe_allow_html=True)
-
-st.divider()
-
-tab1, tab2, tab3, tab4, tab5 = st.tabs(lang["tabs"])
-
-with tab1:
-    st.header(lang["tabs"][0])
-    st.write(f"{'Relazione Accademica' if sel_idioma=='Italiano' else 'Informe Académico'} (Normas APA 7ma).")
-    st.info(lang["obj"])
-    st.subheader("📝 Metodología")
-    st.markdown("""
-    **Tipo de estudio:** Cuantitativo exploratorio | **Diseño:** No experimental transversal  
-    **Instrumento:** Escala Likert 1-5 | **Variables:** Uso de IA y Pensamiento Crítico.
-    """)
-
-with tab2:
-    st.header(lang["tabs"][1])
-    st.subheader("🔎 Validación de Datos")
-    st.dataframe(datos[habilidades].describe().T)
-    st.divider()
-    uso = datos["Uso_IA"].value_counts(normalize=True)*100
-    c1, c2, c3 = st
+        "config": "⚙️
