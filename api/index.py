@@ -13,7 +13,7 @@ import google.generativeai as genai  # <--- NUEVA LIBRERÍA
 # CONFIGURACIÓN DE GEMINI (IA)
 # ------------------------------------------------
 # Nota: En producción, usa st.secrets para mayor seguridad
-API_KEY = "TU_API_KEY_AQUI" 
+API_KEY = "AIzaSyC3XWlImuVEFuqo5p0H0FjcKX0n5XmlF1E" 
 if API_KEY != "TU_API_KEY_AQUI":
     genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel('gemini-1.5-flash')
@@ -23,6 +23,7 @@ if API_KEY != "TU_API_KEY_AQUI":
 # ------------------------------------------------
 @st.cache_data
 def generar_datos(n):
+    """Genera la base de datos simulada con caché para optimizar rendimiento."""
     np.random.seed(42)
     return pd.DataFrame({
         "Uso_IA": np.random.choice(["Andamiaje","Sustituto"], n, p=[0.65,0.35]),
@@ -112,6 +113,7 @@ idiomas = {
 # ------------------------------------------------
 st.set_page_config(page_title="Investigación UNEMI", layout="wide")
 
+# Lógica de efectos visuales (globos)
 if st.session_state.get('lanzar_globos'):
     st.balloons()
     st.session_state.lanzar_globos = False
@@ -140,12 +142,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 4. MANEJO DE DATOS
+# 4. MANEJO DE DATOS (ESTADO DE SESIÓN)
 # ------------------------------------------------
 with st.sidebar:
     st.header(lang["config"])
     n_muestra_input = st.slider(lang["muestra"], 50, 500, 100)
 
+# Mejora arquitectónica: regenerar si cambia el tamaño de la muestra
 if 'main_data' not in st.session_state or len(st.session_state.main_data) != n_muestra_input:
     st.session_state.main_data = generar_datos(n_muestra_input)
 
@@ -154,7 +157,7 @@ habilidades = ["Analisis", "Evaluacion", "Autorregulacion", "Inferencia"]
 promedios = datos[habilidades].mean()
 
 # ------------------------------------------------
-# 5. INTERFAZ
+# 5. INTERFAZ DE USUARIO (PORTADA Y TABS)
 # ------------------------------------------------
 st.title(lang["titulo"])
 st.subheader(lang["sub"])
