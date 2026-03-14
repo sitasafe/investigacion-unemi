@@ -11,15 +11,15 @@ import google.generativeai as genai
 import os
 
 # ------------------------------------------------
-# CONFIGURACIÓN DE GEMINI (IA) - SEGURIDAD Y ACTUALIZACIÓN
+# CONFIGURACIÓN DE GEMINI (IA) - SEGURIDAD Y ESTABILIDAD
 # ------------------------------------------------
-# Recuerda configurar GEMINI_API_KEY en los Secrets de Streamlit
+# Configura GEMINI_API_KEY en los Secrets de Streamlit
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 if API_KEY:
     genai.configure(api_key=API_KEY)
-    # Usamos gemini-2.0-flash, el modelo más actual y rápido disponible
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    # Usamos 1.5-flash porque tiene límites de cuota más amplios que el 2.0
+    model = genai.GenerativeModel("gemini-1.5-flash")
 else:
     model = None
 
@@ -39,28 +39,39 @@ def generar_datos(n):
 
 def obtener_explicacion_ia(df_stats, r2, pearson, p_val):
     if model is None:
-        return "⚠️ Configura la GEMINI_API_KEY en los Secrets de Streamlit para activar la IA."
+        return "⚠️ Error: GEMINI_API_KEY no detectada en los Secrets."
     
     try:
         prompt = f"""
         Actúa como un experto en estadística educativa de la UNEMI. 
-        Analiza estos datos de investigación sobre IA y Pensamiento Crítico:
-        - Promedios: {df_stats.to_dict()}
+        Analiza estos datos sobre IA y Pensamiento Crítico:
+        - Promedios habilidades: {df_stats.to_dict()}
         - R² (Varianza): {r2:.4f}
         - Correlación Pearson: {pearson:.3f}
-        - Valor p: {p_val:.4f}
+        - Valor p (significancia): {p_val:.4f}
         
         Dame una conclusión académica de 3 párrafos sobre si la IA funciona como 
-        andamiaje o sustituto en este grupo. Sé muy profesional.
+        andamiaje o sustituto. Sé muy profesional.
         """
         response = model.generate_content(prompt)
         
         if hasattr(response, "text"):
             return response.text
         else:
-            return "La IA no pudo generar el texto de respuesta."
+            raise Exception("Respuesta vacía")
+            
     except Exception as e:
-        return f"Error técnico con Gemini 2.0: {str(e)}"
+        # PLAN B: Si la IA falla por cuota (Error 429), el programa no se rompe
+        interpretacion = "Andamiaje Cognitivo" if pearson > 0.3 else "Sustitución de procesos"
+        significancia = "estadísticamente significativa" if p_val < 0.05 else "no significativa"
+        
+        return f"""
+        **Nota del Sistema (Análisis Automático):** El servidor de IA está temporalmente saturado, pero el motor estadístico indica:
+        
+        Los datos sugieren una tendencia hacia el **{interpretacion}**. 
+        La relación observada es **{significancia}** con un nivel de confianza del 95% (p={p_val:.4f}). 
+        Se observa que la habilidad con mayor impacto es **{df_stats.idxmax()}** con un promedio de **{df_stats.max():.2f}**.
+        """
 
 # ------------------------------------------------
 # 2. DICCIONARIO DE TRADUCCIÓN
@@ -74,12 +85,10 @@ idiomas = {
         "config": "⚙️ Configuración",
         "muestra": "Tamaño de la muestra",
         "tabs": ["📂 Producto", "📊 Diagnóstico", "🧠 Mapeo", "📉 Estadística", "💡 Guía"],
-        "obj": "Objetivo: Analizar la relación entre Inteligencia Artificial Generativa y Pensamiento Crítico en la UNEMI.",
+        "obj": "Objetivo: Analizar la relación entre IA Generativa y Pensamiento Crítico en la UNEMI.",
         "m_est": "Estudiantes",
         "m_and": "Andamiaje",
         "m_sus": "Sustituto",
-        "regresion": "🤖 Modelo de Regresión",
-        "encuesta": "📝 Simulación de Encuesta",
         "btn_reg": "Registrar y Actualizar",
         "descarga": "📥 Descargar CSV",
         "modo_uso": "Modo de uso",
@@ -102,8 +111,6 @@ idiomas = {
         "m_est": "Studenti",
         "m_and": "Impalcatura",
         "m_sus": "Sostituto",
-        "regresion": "🤖 Modello di Regressione",
-        "encuesta": "📝 Simulazione di Sondaggio",
         "btn_reg": "Registrare e Aggiornare",
         "descarga": "📥 Scarica CSV",
         "modo_uso": "Modalità d'uso",
@@ -139,7 +146,7 @@ st.markdown("""
     }
     .ia-box {
         background-color: #E8F0FE; padding: 20px; border-radius: 10px;
-        border-left: 5px solid #4285F4; margin: 10px 0;
+        border-left: 5px solid #4285F4; margin: 10px 0; border: 1px solid #D1D9E6;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -193,7 +200,7 @@ with tab2:
     c1.metric(lang["m_est"], len(datos))
     c2.metric(lang["m_and"], f"{uso.get('Andamiaje',0):.1f}%")
     c3.metric(lang["m_sus"], f"{uso.get('Sustituto',0):.1f}%")
-    st.plotly_chart(px.pie(names=uso.index, values=uso.values, hole=0.4), use_container_width=True)
+    st.plotly_chart(px.pie(names=uso.index, values=uso.values, hole=0.4, color_discrete_sequence=['#BEE3DB', '#FFD8BE']), use_container_width=True)
 
 with tab3:
     st.header(lang["tabs"][2])
@@ -201,24 +208,25 @@ with tab3:
 
 with tab4:
     st.header(lang["tabs"][3])
-    # Estadística Avanzada
+    # Cálculo Estadístico
     datos["Indice_PC"] = datos[habilidades].mean(axis=1)
     datos["Uso_IA_bin"] = datos["Uso_IA"].map({"Andamiaje":1, "Sustituto":0})
     modelo = sm.OLS(datos["Indice_PC"], sm.add_constant(datos["Uso_IA_bin"])).fit()
     correlacion, p_valor = stats.pearsonr(datos["Uso_IA_bin"], datos["Indice_PC"])
     
-    st.subheader("🤖 Interpretación con Gemini 2.0")
+    st.subheader("🤖 Interpretación con IA")
+    st.write("Presiona el botón para analizar los resultados estadísticos.")
     if st.button("Generar Análisis Académico"):
-        with st.spinner("Analizando datos..."):
+        with st.spinner("Analizando..."):
             explicacion = obtener_explicacion_ia(promedios, modelo.rsquared, correlacion, p_valor)
             st.markdown(f'<div class="ia-box">{explicacion}</div>', unsafe_allow_html=True)
     
     st.divider()
-    st.subheader("📊 Métricas de Investigación")
+    st.subheader("📊 Métricas de Validación")
     m1, m2, m3 = st.columns(3)
     m1.metric("Coeficiente R²", f"{modelo.rsquared:.4f}")
     m2.metric("Correlación Pearson", f"{correlacion:.3f}")
-    m3.metric("Valor p", f"{p_valor:.4f}")
+    m3.metric("Valor p (p-value)", f"{p_valor:.4f}")
 
 with tab5:
     st.header(lang["tabs"][4])
@@ -226,11 +234,12 @@ with tab5:
         with st.expander(lang[g]): st.write(lang["txt_" + g.split('_')[1]])
 
 st.divider()
-st.header(lang["encuesta"])
+st.header("📝 Simulación de Encuesta")
 with st.form("encuesta_form"):
     u_sel = st.selectbox(lang["modo_uso"], [lang["m_and"], lang["m_sus"]])
-    if st.form_submit_button(lang["btn_reg"]):
+    if st.form_submit_button("Registrar"):
         st.session_state.lanzar_globos = True
         st.rerun()
 
+st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_investigacion.csv", "text/csv")
 st.caption("Developed by Ing. Willan E. Álvarez C. - UNEMI 2026")
