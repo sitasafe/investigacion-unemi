@@ -101,10 +101,25 @@ with tab3:
 with tab4:
     st.header("🔍 Análisis Estadístico")
     st.subheader("Intervalos de Confianza (95%)")
+    
+    # Cálculo estadístico
     std = datos[habilidades].std()
     error = 1.96*(std/np.sqrt(n_muestra))
-    df_ic = pd.DataFrame({"Habilidad":habilidades, "Media":promedios.values, "IC Inferior":promedios-error, "IC Superior":promedios+error})
-    st.dataframe(df_ic, use_container_width=True)
+    df_ic = pd.DataFrame({
+        "Habilidad": habilidades, 
+        "Media": promedios.values, 
+        "IC Inferior": promedios.values - error.values, 
+        "IC Superior": promedios.values + error.values
+    })
+
+    # --- EFECTO VISUAL EN LA TABLA ---
+    # Usamos barras de datos nativas de Pandas para que se vea dinámico
+    st.dataframe(
+        df_ic.style.format(precision=4)
+        .bar(subset=['Media'], color='#BEE3DB', vmin=1, vmax=5)
+        .highlight_max(subset=['Media'], color='#FFD8BE'), 
+        use_container_width=True
+    )
 
     st.subheader("🤖 Modelo de Regresión")
     datos["Indice_PC"] = datos[habilidades].mean(axis=1)
