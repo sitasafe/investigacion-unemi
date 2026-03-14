@@ -2,65 +2,101 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-import statsmodels.api as sm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import letter
-
-# -----------------------------------------
-# CONFIGURACIÓN
-# -----------------------------------------
 
 st.set_page_config(page_title="Investigación UNEMI", layout="wide")
 
-st.title("📊 Investigación: IAGen y Pensamiento Crítico")
-st.subheader("Universidad Estatal de Milagro (UNEMI)")
+# ------------------------------------------------
+# PORTADA
+# ------------------------------------------------
 
-# -----------------------------------------
-# PARÁMETROS
-# -----------------------------------------
+st.title("Informe Académico de Investigación")
+st.subheader("Impacto de la Inteligencia Artificial Generativa en el Pensamiento Crítico")
 
-with st.sidebar:
+st.markdown("""
+**Maestría en Educación mención en Docencia e Investigación en Educación Superior**
 
-    st.header("Configuración del estudio")
+**Módulo:** Seminario de Investigación 1  
+**Actividad:** Tarea de Contacto con Docente  
 
-    n_muestra = st.slider(
-        "Tamaño de la muestra",
-        50,
-        500,
-        100
-    )
+**Tutor:** Bonisoli Lorenzo PhD.
 
-# -----------------------------------------
-# GENERAR DATOS
-# -----------------------------------------
+**Integrantes**
 
-@st.cache_data
-def generar_datos(n):
+- Willan Efrén Álvarez Carmona  
+- Tania Jacqueline Barcos Villalva  
+- Selene Anaís Guagua Valencia  
+- Pedro Javier Figueroa Vergara  
+- Nohemí Nicole Miranda Jiménez  
 
-    np.random.seed(42)
+**Fecha de entrega:** 07 de marzo de 2026
+""")
 
-    df = pd.DataFrame({
+st.divider()
 
-        "Uso_IA": np.random.choice(
-            ["Andamiaje","Sustituto"],
-            n,
-            p=[0.65,0.35]
-        ),
+# ------------------------------------------------
+# TABS DEL INFORME
+# ------------------------------------------------
 
-        "Analisis": np.random.normal(3.8,0.5,n).clip(1,5),
-        "Evaluacion": np.random.normal(3.2,0.6,n).clip(1,5),
-        "Autorregulacion": np.random.normal(3.5,0.4,n).clip(1,5),
-        "Inferencia": np.random.normal(3.9,0.3,n).clip(1,5)
+tab1,tab2,tab3,tab4 = st.tabs([
+"Producto Esperado",
+"Diagnóstico Situacional",
+"Mapeo Cognitivo",
+"Guía Pedagógica"
+])
 
-    })
+# ------------------------------------------------
+# PRODUCTO ESPERADO
+# ------------------------------------------------
 
-    return df
+with tab1:
 
+    st.header("Producto Esperado")
 
-datos = generar_datos(n_muestra)
+    st.write("""
+El producto final de esta investigación aplicada se materializa en un **Informe Académico de Investigación**, estructurado bajo normas **APA 7ma edición**, que sistematiza el análisis de la relación entre el uso de herramientas de **Inteligencia Artificial Generativa (IAGen)** y el desarrollo del **pensamiento crítico en estudiantes de grado de la modalidad en línea de la Universidad Estatal de Milagro (UNEMI)**.
+""")
+
+    st.subheader("Entregables técnicos")
+
+    st.markdown("""
+**1. Diagnóstico Situacional**
+
+Identificación de patrones de uso y hábitos de interacción de los estudiantes con la IAGen, permitiendo detectar si la herramienta se utiliza como un **andamiaje cognitivo** o como un **sustituto intelectual**.
+
+**2. Mapeo de Influencia Cognitiva**
+
+Evaluación de la influencia de la IAGen en habilidades de orden superior según la **Taxonomía de Bloom**:
+
+- Análisis
+- Evaluación
+- Autorregulación
+- Inferencia
+
+**3. Guía de Recomendaciones Pedagógicas**
+
+Lineamientos estratégicos para docentes y autoridades académicas orientados a promover un **uso ético y responsable de la inteligencia artificial en entornos virtuales de aprendizaje**.
+""")
+
+# ------------------------------------------------
+# GENERAR DATOS DE INVESTIGACIÓN
+# ------------------------------------------------
+
+np.random.seed(42)
+
+datos = pd.DataFrame({
+
+"Uso_IA": np.random.choice(
+["Andamiaje","Sustituto"],
+100,
+p=[0.65,0.35]
+),
+
+"Analisis": np.random.normal(3.8,0.5,100).clip(1,5),
+"Evaluacion": np.random.normal(3.2,0.6,100).clip(1,5),
+"Autorregulacion": np.random.normal(3.5,0.4,100).clip(1,5),
+"Inferencia": np.random.normal(3.9,0.3,100).clip(1,5)
+
+})
 
 habilidades = [
 "Analisis",
@@ -69,256 +105,80 @@ habilidades = [
 "Inferencia"
 ]
 
-# -----------------------------------------
-# METODOLOGÍA
-# -----------------------------------------
+# ------------------------------------------------
+# DIAGNOSTICO
+# ------------------------------------------------
 
-st.header("📚 Metodología")
+with tab2:
 
-st.write(f"""
-Estudio cuantitativo descriptivo correlacional.
+    st.header("Diagnóstico Situacional")
 
-Muestra analizada: **{n_muestra} estudiantes**.
+    uso = datos["Uso_IA"].value_counts(normalize=True)*100
 
-Se evalúan habilidades de pensamiento crítico basadas en la Taxonomía de Bloom.
+    st.write(f"""
+Los resultados muestran que aproximadamente **{uso.get("Andamiaje",0):.1f}%** de los estudiantes utilizan la inteligencia artificial como **andamiaje cognitivo**, mientras que **{uso.get("Sustituto",0):.1f}%** la emplean como **sustituto intelectual**.
 """)
 
-# -----------------------------------------
-# DIAGNÓSTICO
-# -----------------------------------------
-
-st.header("1️⃣ Diagnóstico Situacional")
-
-uso = datos["Uso_IA"].value_counts(normalize=True)*100
-
-col1,col2,col3 = st.columns(3)
-
-col1.metric("Estudiantes",n_muestra)
-col2.metric("Andamiaje",f"{uso.get('Andamiaje',0):.1f}%")
-col3.metric("Sustituto",f"{uso.get('Sustituto',0):.1f}%")
-
-fig_pie = px.pie(
-names=uso.index,
-values=uso.values,
-hole=0.4
+    fig = px.pie(
+    names=uso.index,
+    values=uso.values,
+    hole=0.4,
+    title="Patrones de uso de IAGen"
 )
 
-st.plotly_chart(fig_pie,use_container_width=True)
+    st.plotly_chart(fig,use_container_width=True)
 
-# -----------------------------------------
+# ------------------------------------------------
 # MAPEO COGNITIVO
-# -----------------------------------------
+# ------------------------------------------------
 
-st.header("2️⃣ Mapeo Cognitivo")
+with tab3:
 
-promedios = datos[habilidades].mean()
+    st.header("Mapeo de Influencia Cognitiva")
 
-df_bloom = pd.DataFrame({
-"Habilidad":habilidades,
-"Promedio":promedios.values
+    promedios = datos[habilidades].mean()
+
+    df = pd.DataFrame({
+    "Habilidad":habilidades,
+    "Promedio":promedios.values
 })
 
-fig_bar = px.bar(
-df_bloom,
-x="Habilidad",
-y="Promedio",
-color="Promedio"
+    fig = px.bar(
+    df,
+    x="Habilidad",
+    y="Promedio",
+    color="Promedio",
+    title="Nivel promedio de habilidades cognitivas"
 )
 
-st.plotly_chart(fig_bar,use_container_width=True)
+    st.plotly_chart(fig,use_container_width=True)
 
-# -----------------------------------------
-# INTERVALOS DE CONFIANZA
-# -----------------------------------------
+    st.write("""
+Los resultados sugieren que las habilidades de **inferencia y análisis presentan valores más altos**, lo cual puede estar asociado con el uso de herramientas de apoyo cognitivo. Sin embargo, las habilidades de **evaluación crítica requieren fortalecimiento pedagógico**.
+""")
 
-st.header("3️⃣ Intervalos de Confianza")
+# ------------------------------------------------
+# RECOMENDACIONES
+# ------------------------------------------------
 
-media = datos[habilidades].mean()
-std = datos[habilidades].std()
-n = len(datos)
+with tab4:
 
-error = 1.96*(std/np.sqrt(n))
+    st.header("Guía de Recomendaciones Pedagógicas")
 
-df_ic = pd.DataFrame({
-"Habilidad":habilidades,
-"Media":media.values,
-"IC Inferior":(media-error).values,
-"IC Superior":(media+error).values
-})
+    st.success("""
+**Para docentes**
 
-st.dataframe(df_ic)
+- Diseñar actividades que requieran **argumentación y verificación de fuentes**.
+- Integrar la IA como **herramienta de apoyo y no sustitución cognitiva**.
+- Fomentar el aprendizaje basado en problemas.
 
-# -----------------------------------------
-# CORRELACIÓN
-# -----------------------------------------
+**Para estudiantes**
 
-st.header("4️⃣ Correlación")
+- Utilizar la IA para **explorar perspectivas múltiples**.
+- Realizar **autoevaluación crítica de respuestas generadas por IA**.
 
-corr = datos[habilidades].corr()
+**Para instituciones**
 
-fig_corr = px.imshow(
-corr,
-text_auto=True,
-color_continuous_scale="Blues"
-)
-
-st.plotly_chart(fig_corr,use_container_width=True)
-
-# -----------------------------------------
-# REGRESIÓN
-# -----------------------------------------
-
-st.header("5️⃣ Regresión")
-
-datos["Indice_PC"] = datos[habilidades].mean(axis=1)
-
-datos["Uso_IA_bin"] = datos["Uso_IA"].map({
-"Andamiaje":1,
-"Sustituto":0
-})
-
-X = sm.add_constant(datos["Uso_IA_bin"])
-y = datos["Indice_PC"]
-
-modelo = sm.OLS(y,X).fit()
-
-st.text(modelo.summary())
-
-# -----------------------------------------
-# MODELO PREDICTIVO
-# -----------------------------------------
-
-st.header("6️⃣ Modelo Predictivo")
-
-X_ml = datos[habilidades]
-y_ml = datos["Indice_PC"]
-
-X_train,X_test,y_train,y_test = train_test_split(
-X_ml,
-y_ml,
-test_size=0.2,
-random_state=42
-)
-
-modelo_ml = LinearRegression()
-
-modelo_ml.fit(X_train,y_train)
-
-score = modelo_ml.score(X_test,y_test)
-
-st.metric("Precisión del modelo",f"{score:.2f}")
-
-# -----------------------------------------
-# ENCUESTA REAL
-# -----------------------------------------
-
-st.header("🧪 Simulación de Encuesta")
-
-with st.form("encuesta"):
-
-    uso = st.selectbox(
-        "¿Cómo usas la IA?",
-        ["Andamiaje","Sustituto"]
-    )
-
-    analisis = st.slider("Análisis",1,5,3)
-    evaluacion = st.slider("Evaluación",1,5,3)
-    autorreg = st.slider("Autorregulación",1,5,3)
-    inferencia = st.slider("Inferencia",1,5,3)
-
-    enviar = st.form_submit_button("Enviar")
-
-if enviar:
-
-    nueva = pd.DataFrame([{
-        "Uso_IA":uso,
-        "Analisis":analisis,
-        "Evaluacion":evaluacion,
-        "Autorregulacion":autorreg,
-        "Inferencia":inferencia
-    }])
-
-    st.success("Respuesta registrada")
-    st.dataframe(nueva)
-
-# -----------------------------------------
-# DESCARGAR DATOS
-# -----------------------------------------
-
-st.header("📥 Descargar datos")
-
-csv = datos.to_csv(index=False)
-
-st.download_button(
-"Descargar base de datos",
-csv,
-"datos_investigacion_unemi.csv",
-"text/csv"
-)
-
-# -----------------------------------------
-# GENERAR INFORME APA
-# -----------------------------------------
-
-def generar_pdf():
-
-    styles = getSampleStyleSheet()
-
-    contenido = []
-
-    contenido.append(
-        Paragraph(
-        "Impacto de la Inteligencia Artificial Generativa en el Pensamiento Crítico",
-        styles["Title"]
-        )
-    )
-
-    contenido.append(Spacer(1,20))
-
-    contenido.append(
-        Paragraph(
-        f"Muestra analizada: {n_muestra} estudiantes",
-        styles["Normal"]
-        )
-    )
-
-    contenido.append(
-        Paragraph(
-        f"Promedio global pensamiento crítico: {datos['Indice_PC'].mean():.2f}",
-        styles["Normal"]
-        )
-    )
-
-    contenido.append(
-        Paragraph(
-        "El análisis sugiere que el uso de IA como andamiaje cognitivo está asociado con niveles moderados de pensamiento crítico.",
-        styles["Normal"]
-        )
-    )
-
-    archivo="informe_unemi.pdf"
-
-    doc=SimpleDocTemplate(
-    archivo,
-    pagesize=letter
-    )
-
-    doc.build(contenido)
-
-    return archivo
-
-
-st.header("📄 Informe automático")
-
-if st.button("Generar informe"):
-
-    archivo=generar_pdf()
-
-    with open(archivo,"rb") as f:
-
-        st.download_button(
-        "Descargar informe APA",
-        f,
-        file_name="informe_unemi.pdf",
-        mime="application/pdf"
-        )
+- Implementar **políticas de uso ético de IA**.
+- Capacitar docentes en **IA aplicada a la educación**.
+""")
