@@ -98,7 +98,7 @@ st.markdown("""
 # ------------------------------------------------
 st.title(lang["titulo"])
 st.subheader(lang["sub"])
-st.markdown(f"**🎓 Maestría en Educación UNEMI** | **👨‍🏫 {lang['tutor']}:** Bonisoli Lorenzo PhD. | **📅 Fecha:** 07/03/2026")
+st.markdown(f"**🎓 Maestría en Educación mención en Docencia e Investigación en Educación Superior** | **👨‍🏫 {lang['tutor']}:** Bonisoli Lorenzo PhD. | **📅 Fecha:** 07/03/2026")
 
 st.write(f"### {lang['equipo']}")
 c_i1, c_i2, c_i3 = st.columns(3)
@@ -212,11 +212,11 @@ with st.form("encuesta"):
 st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_unemi.csv", "text/csv")
 
 # ------------------------------------------------
-# PIE DE PÁGINA REQUERIDO
+# PIE DE PÁGINA ACTUALIZADO
 # ------------------------------------------------
 st.divider()
 st.caption("""
 Research Data Analytics System  
 Developed by Ing. Willan E. Álvarez C.
-Maestría en Educación – Universidad Estatal de Milagro
+Maestría en Educación mención en Docencia e Investigación en Educación Superior – Universidad Estatal de Milagro
 """)
