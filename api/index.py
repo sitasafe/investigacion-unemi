@@ -44,7 +44,7 @@ idiomas = {
         "encuesta": "📝 Simulación de Encuesta",
         "btn_reg": "Registrar y Actualizar",
         "exito": "¡Datos enviados con éxito!",
-        "descarga": "📥 Descargar Base CSV",
+        "descarga": "📥 Descargar",
         "modo_uso": "Modo de uso",
         "guia_doc": "👨‍🏫 Para Docentes",
         "guia_est": "🎓 Para Estudiantes",
