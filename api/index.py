@@ -16,11 +16,42 @@ from reportlab.lib.pagesizes import letter
 st.set_page_config(page_title="Investigación UNEMI", layout="wide")
 
 # ------------------------------------------------
+# EFECTOS VISUALES
+# ------------------------------------------------
+
+st.markdown("""
+<style>
+
+.main {
+    animation: fadeIn 1.5s ease-in;
+}
+
+@keyframes fadeIn {
+    0% {opacity:0;}
+    100% {opacity:1;}
+}
+
+.block-container {
+    padding-top: 2rem;
+}
+
+div[data-testid="stMetricValue"] {
+    font-size: 28px;
+    color: #1f77b4;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------------------------------------
 # PORTADA ACADÉMICA
 # ------------------------------------------------
 
 st.title("Informe Académico de Investigación")
 st.subheader("Impacto de la Inteligencia Artificial Generativa en el Pensamiento Crítico")
+
+st.progress(100)
+st.caption("Sistema interactivo de análisis de investigación educativa")
 
 st.markdown("""
 **Maestría en Educación mención en Docencia e Investigación en Educación Superior**
@@ -85,7 +116,8 @@ def generar_datos(n):
     return df
 
 
-datos = generar_datos(n_muestra)
+with st.spinner("Generando muestra de investigación..."):
+    datos = generar_datos(n_muestra)
 
 habilidades = [
 "Analisis",
@@ -135,7 +167,7 @@ Lineamientos para promover un uso **ético y responsable de la inteligencia arti
 """)
 
 # ------------------------------------------------
-# DIAGNÓSTICO (CON GRÁFICO PIE)
+# DIAGNÓSTICO
 # ------------------------------------------------
 
 with tab2:
@@ -153,13 +185,23 @@ with tab2:
     fig_pie = px.pie(
         names=uso.index,
         values=uso.values,
-        hole=0.4
+        hole=0.5,
+        color_discrete_sequence=px.colors.sequential.Teal
+    )
+
+    fig_pie.update_traces(
+        textposition="inside",
+        textinfo="percent+label"
+    )
+
+    fig_pie.update_layout(
+        transition_duration=500
     )
 
     st.plotly_chart(fig_pie,use_container_width=True)
 
 # ------------------------------------------------
-# MAPEO COGNITIVO (GRÁFICO BAR)
+# MAPEO COGNITIVO
 # ------------------------------------------------
 
 with tab3:
@@ -180,10 +222,14 @@ with tab3:
         color="Promedio"
     )
 
+    fig_bar.update_layout(
+        transition_duration=600
+    )
+
     st.plotly_chart(fig_bar,use_container_width=True)
 
 # ------------------------------------------------
-# ANÁLISIS ESTADÍSTICO (TODOS TUS GRÁFICOS)
+# ANÁLISIS ESTADÍSTICO
 # ------------------------------------------------
 
 with tab4:
@@ -212,7 +258,12 @@ with tab4:
     fig_corr = px.imshow(
         corr,
         text_auto=True,
-        color_continuous_scale="Blues"
+        color_continuous_scale="Blues",
+        aspect="auto"
+    )
+
+    fig_corr.update_layout(
+        transition_duration=700
     )
 
     st.plotly_chart(fig_corr,use_container_width=True)
@@ -249,6 +300,8 @@ with tab4:
 
     st.metric("Precisión del modelo",f"{score:.2f}")
 
+    st.progress(int(score*100))
+
 # ------------------------------------------------
 # GUÍA PEDAGÓGICA
 # ------------------------------------------------
@@ -280,6 +333,8 @@ with tab5:
 
 st.header("Simulación de Encuesta")
 
+st.info("Complete la encuesta para simular nuevos datos en el estudio.")
+
 with st.form("encuesta"):
 
     uso = st.selectbox(
@@ -295,6 +350,8 @@ with st.form("encuesta"):
     enviar = st.form_submit_button("Enviar")
 
 if enviar:
+
+    st.balloons()
 
     nueva = pd.DataFrame([{
         "Uso_IA":uso,
@@ -312,6 +369,8 @@ if enviar:
 # ------------------------------------------------
 
 st.header("Descargar datos")
+
+st.success("La base de datos puede descargarse para análisis adicional.")
 
 csv = datos.to_csv(index=False)
 
@@ -371,13 +430,15 @@ st.header("Informe automático")
 
 if st.button("Generar informe"):
 
-    archivo=generar_pdf()
+    with st.spinner("Generando informe académico..."):
 
-    with open(archivo,"rb") as f:
+        archivo=generar_pdf()
 
-        st.download_button(
-        "Descargar informe APA",
-        f,
-        file_name="informe_unemi.pdf",
-        mime="application/pdf"
-        )
+        with open(archivo,"rb") as f:
+
+            st.download_button(
+            "Descargar informe APA",
+            f,
+            file_name="informe_unemi.pdf",
+            mime="application/pdf"
+            )
