@@ -26,14 +26,15 @@ def home():
         <meta charset="UTF-8">
         <title>Producto Esperado - Seminario I</title>
         <style>
-            body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; padding: 40px; color: #333; }
-            .container { max-width: 800px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
-            h1 { color: #1a3a5a; border-bottom: 2px solid #1a3a5a; }
+            body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; padding: 40px; color: #333; background-color: #f0f2f5; }
+            .container { max-width: 800px; margin: auto; border: 1px solid #ddd; padding: 30px; border-radius: 10px; background: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+            h1 { color: #1a3a5a; border-bottom: 2px solid #1a3a5a; padding-bottom: 10px; }
             h2 { color: #2c3e50; margin-top: 30px; }
             .card { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-left: 5px solid #1a3a5a; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-            th { background-color: #f2f2f2; }
+            th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+            th { background-color: #1a3a5a; color: white; }
+            tr:nth-child(even) { background-color: #f2f2f2; }
         </style>
     </head>
     <body>
@@ -48,14 +49,18 @@ def home():
 
             <h2>2. Mapeo de Influencia Cognitiva (Taxonomía de Bloom)</h2>
             <table>
-                <tr><th>Dimensión Cognitiva</th><th>Nivel (1-5)</th><th>Influencia IA</th></tr>
-                {% for index, row in data.iterrows() %}
-                <tr>
-                    <td>{{ row['Habilidad'] }}</td>
-                    <td>{{ row['Nivel_Promedio'] }}</td>
-                    <td>{{ row['Impacto_IA'] }}</td>
-                </tr>
-                {% endfor %}
+                <thead>
+                    <tr><th>Dimensión Cognitiva</th><th>Nivel (1-5)</th><th>Influencia IA</th></tr>
+                </thead>
+                <tbody>
+                    {% for index, row in df.iterrows() %}
+                    <tr>
+                        <td>{{ row['Habilidad'] }}</td>
+                        <td>{{ row['Nivel_Promedio'] }}</td>
+                        <td>{{ row['Impacto_IA'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
             </table>
 
             <h2>3. Guía de Recomendaciones Pedagógicas</h2>
@@ -70,7 +75,10 @@ def home():
     </body>
     </html>
     """
-    return render_template_string(html_template, data=df)
+    return render_template_string(html_template, df=df)
+
+# --- CONFIGURACIÓN PARA VERCEL ---
+app = app
 
 if __name__ == "__main__":
     app.run(debug=True)
