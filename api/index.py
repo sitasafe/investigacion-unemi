@@ -7,13 +7,22 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
 from scipy import stats
+import google.generativeai as genai  # <--- NUEVA LIBRERÍA
 
 # ------------------------------------------------
-# 1. FUNCIONES DE LÓGICA (SEPARACIÓN DE CONTEXTO)
+# CONFIGURACIÓN DE GEMINI (IA)
+# ------------------------------------------------
+# Nota: En producción, usa st.secrets para mayor seguridad
+API_KEY = "TU_API_KEY_AQUI" 
+if API_KEY != "TU_API_KEY_AQUI":
+    genai.configure(api_key=API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+
+# ------------------------------------------------
+# 1. FUNCIONES DE LÓGICA
 # ------------------------------------------------
 @st.cache_data
 def generar_datos(n):
-    """Genera la base de datos simulada con caché para optimizar rendimiento."""
     np.random.seed(42)
     return pd.DataFrame({
         "Uso_IA": np.random.choice(["Andamiaje","Sustituto"], n, p=[0.65,0.35]),
@@ -22,6 +31,23 @@ def generar_datos(n):
         "Autorregulacion": np.random.normal(3.5,0.4,n).clip(1,5),
         "Inferencia": np.random.normal(3.9,0.3,n).clip(1,5)
     })
+
+def obtener_explicacion_ia(df_stats, r2):
+    """Usa Gemini para interpretar los datos estadísticos."""
+    try:
+        prompt = f"""
+        Actúa como un experto en estadística educativa. 
+        Analiza estos datos de una investigación en la UNEMI sobre IA y Pensamiento Crítico:
+        - Promedios por habilidad: {df_stats.to_string()}
+        - Coeficiente R2 del modelo: {r2:.4f}
+        
+        Dame una conclusión breve (máximo 3 párrafos) sobre si la IA está ayudando 
+        al pensamiento crítico o si actúa como un sustituto. Sé muy profesional.
+        """
+        response = model.generate_content(prompt)
+        return response.text
+    except:
+        return "Conecta tu API Key de Gemini para ver la interpretación automática de la IA."
 
 # ------------------------------------------------
 # 2. DICCIONARIO DE TRADUCCIÓN
@@ -86,7 +112,6 @@ idiomas = {
 # ------------------------------------------------
 st.set_page_config(page_title="Investigación UNEMI", layout="wide")
 
-# Lógica de efectos visuales (globos)
 if st.session_state.get('lanzar_globos'):
     st.balloons()
     st.session_state.lanzar_globos = False
@@ -104,17 +129,23 @@ st.markdown("""
         padding: 10px; border-radius: 8px; border-left: 5px solid #BEE3DB;
         margin-bottom: 8px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);
     }
+    .ia-box {
+        background-color: #E8F0FE;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 5px solid #4285F4;
+        margin: 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 4. MANEJO DE DATOS (ESTADO DE SESIÓN)
+# 4. MANEJO DE DATOS
 # ------------------------------------------------
 with st.sidebar:
     st.header(lang["config"])
     n_muestra_input = st.slider(lang["muestra"], 50, 500, 100)
 
-# Mejora arquitectónica: regenerar si cambia el tamaño de la muestra
 if 'main_data' not in st.session_state or len(st.session_state.main_data) != n_muestra_input:
     st.session_state.main_data = generar_datos(n_muestra_input)
 
@@ -123,7 +154,7 @@ habilidades = ["Analisis", "Evaluacion", "Autorregulacion", "Inferencia"]
 promedios = datos[habilidades].mean()
 
 # ------------------------------------------------
-# 5. INTERFAZ DE USUARIO (PORTADA Y TABS)
+# 5. INTERFAZ
 # ------------------------------------------------
 st.title(lang["titulo"])
 st.subheader(lang["sub"])
@@ -182,18 +213,20 @@ with tab4:
     st.subheader("🔢 Correlación de Pearson")
     st.plotly_chart(px.imshow(datos[habilidades].corr(), text_auto=True, color_continuous_scale='RdBu_r'), use_container_width=True)
     st.divider()
-    st.subheader("🧪 Prueba de Hipótesis (T-Test)")
-    and_vals = datos[datos["Uso_IA"] == "Andamiaje"][habilidades].mean(axis=1)
-    sus_vals = datos[datos["Uso_IA"] == "Sustituto"][habilidades].mean(axis=1)
-    t_stat, p_val = stats.ttest_ind(and_vals, sus_vals)
-    st.write(f"**Estadístico t:** {t_stat:.4f} | **P-Valor:** {p_val:.4f}")
-    if p_val < 0.05: st.success("✅ Diferencia estadísticamente significativa.")
-    else: st.warning("⚠️ Sin diferencia significativa.")
-    st.divider()
+    
+    # REGRESIÓN
     datos["Indice_PC"] = datos[habilidades].mean(axis=1)
     datos["Uso_IA_bin"] = datos["Uso_IA"].map({"Andamiaje":1, "Sustituto":0})
     modelo = sm.OLS(datos["Indice_PC"], sm.add_constant(datos["Uso_IA_bin"])).fit()
-    st.subheader("📘 Interpretación")
+    
+    st.subheader("🤖 Interpretación con IA (Google Gemini)")
+    if st.button("Generar Análisis con IA"):
+        with st.spinner("Gemini está analizando los datos..."):
+            explicacion = obtener_explicacion_ia(promedios, modelo.rsquared)
+            st.markdown(f'<div class="ia-box">{explicacion}</div>', unsafe_allow_html=True)
+    
+    st.divider()
+    st.subheader("📘 Estadísticas de Regresión")
     if modelo.rsquared > 0.5: st.success(f"Relación fuerte (R²: {modelo.rsquared:.4f})")
     else: st.info(f"Relación moderada/débil (R²: {modelo.rsquared:.4f})")
 
@@ -215,9 +248,6 @@ with st.form("encuesta"):
 
 st.download_button(lang["descarga"], datos.to_csv(index=False), "datos_profesional.csv", "text/csv")
 
-# ------------------------------------------------
-# 6. PIE DE PÁGINA FINAL (SIN DUPLICACIÓN)
-# ------------------------------------------------
 st.divider()
 st.caption("""
 Research Data Analytics System  
