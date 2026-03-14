@@ -13,12 +13,10 @@ import os
 # ------------------------------------------------
 # CONFIGURACIÓN DE GEMINI (IA) - SEGURIDAD Y ESTABILIDAD
 # ------------------------------------------------
-# Configura GEMINI_API_KEY en los Secrets de Streamlit
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 if API_KEY:
     genai.configure(api_key=API_KEY)
-    # Usamos 1.5-flash porque tiene límites de cuota más amplios que el 2.0
     model = genai.GenerativeModel("gemini-1.5-flash")
 else:
     model = None
@@ -54,23 +52,18 @@ def obtener_explicacion_ia(df_stats, r2, pearson, p_val):
         andamiaje o sustituto. Sé muy profesional.
         """
         response = model.generate_content(prompt)
-        
         if hasattr(response, "text"):
             return response.text
         else:
             raise Exception("Respuesta vacía")
-            
     except Exception as e:
-        # PLAN B: Si la IA falla por cuota (Error 429), el programa no se rompe
         interpretacion = "Andamiaje Cognitivo" if pearson > 0.3 else "Sustitución de procesos"
         significancia = "estadísticamente significativa" if p_val < 0.05 else "no significativa"
-        
         return f"""
         **Nota del Sistema (Análisis Automático):** El servidor de IA está temporalmente saturado, pero el motor estadístico indica:
-        
         Los datos sugieren una tendencia hacia el **{interpretacion}**. 
-        La relación observada es **{significancia}** con un nivel de confianza del 95% (p={p_val:.4f}). 
-        Se observa que la habilidad con mayor impacto es **{df_stats.idxmax()}** con un promedio de **{df_stats.max():.2f}**.
+        La relación observada es **{significancia}** (p={p_val:.4f}). 
+        La habilidad con mayor impacto es **{df_stats.idxmax()}** con **{df_stats.max():.2f}**.
         """
 
 # ------------------------------------------------
@@ -204,18 +197,37 @@ with tab2:
 
 with tab3:
     st.header(lang["tabs"][2])
-    st.plotly_chart(px.bar(pd.DataFrame({"Hab": habilidades, "Prom": promedios.values}), x="Hab", y="Prom", color="Prom", color_continuous_scale='Teal'), use_container_width=True)
+    col_radar, col_bar = st.columns(2)
+    
+    with col_radar:
+        st.subheader("🧠 Perfil de Pensamiento Crítico")
+        fig_radar = go.Figure()
+        fig_radar.add_trace(go.Scatterpolar(
+            r=promedios.values,
+            theta=habilidades,
+            fill='toself',
+            name='Promedio',
+            fillcolor='rgba(190, 227, 219, 0.6)',
+            line=dict(color='#BEE3DB')
+        ))
+        fig_radar.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[1,5])),
+            showlegend=False
+        )
+        st.plotly_chart(fig_radar, use_container_width=True)
+    
+    with col_bar:
+        st.subheader("📊 Comparativa de Habilidades")
+        st.plotly_chart(px.bar(pd.DataFrame({"Hab": habilidades, "Prom": promedios.values}), x="Hab", y="Prom", color="Prom", color_continuous_scale='Teal'), use_container_width=True)
 
 with tab4:
     st.header(lang["tabs"][3])
-    # Cálculo Estadístico
     datos["Indice_PC"] = datos[habilidades].mean(axis=1)
     datos["Uso_IA_bin"] = datos["Uso_IA"].map({"Andamiaje":1, "Sustituto":0})
     modelo = sm.OLS(datos["Indice_PC"], sm.add_constant(datos["Uso_IA_bin"])).fit()
     correlacion, p_valor = stats.pearsonr(datos["Uso_IA_bin"], datos["Indice_PC"])
     
     st.subheader("🤖 Interpretación con IA")
-    st.write("Presiona el botón para analizar los resultados estadísticos.")
     if st.button("Generar Análisis Académico"):
         with st.spinner("Analizando..."):
             explicacion = obtener_explicacion_ia(promedios, modelo.rsquared, correlacion, p_valor)
