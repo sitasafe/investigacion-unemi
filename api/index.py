@@ -194,7 +194,14 @@ with tab3:
     with col_radar:
         st.subheader("🧠 Radar Profile")
         fig_radar = go.Figure()
-        fig_radar.add_trace(go.Scatterpolar(r=promedios.values, theta=habilidades, fill='toself', name='Promedio', fillcolor='rgba(190, 227, 219, 0.6)', line=dict(color='#BEE3DB')))
+        fig_radar.add_trace(go.Scatterpolar(
+            r=promedios.values, 
+            theta=habilidades, 
+            fill='toself', 
+            name='Promedio', 
+            fillcolor='rgba(190, 227, 219, 0.6)', 
+            line=dict(color='#BEE3DB')
+        ))
         fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[1,5])), showlegend=False)
         st.plotly_chart(fig_radar, use_container_width=True)
     with col_bar:
