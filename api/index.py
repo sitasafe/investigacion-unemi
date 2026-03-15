@@ -17,6 +17,7 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 
 if API_KEY:
     genai.configure(api_key=API_KEY)
+    # Usamos 1.5-flash por estabilidad de cuota en el nivel gratuito
     model = genai.GenerativeModel("gemini-1.5-flash")
 else:
     model = None
@@ -47,7 +48,6 @@ def obtener_explicacion_ia(df_stats, r2, pearson, p_val):
         response = model.generate_content(prompt)
         return response.text if hasattr(response, "text") else "Análisis no disponible."
     except Exception:
-        # PLAN B de seguridad si falla la cuota de la IA
         interpretacion = "Andamiaje Cognitivo" if pearson > 0.3 else "Sustitución de procesos"
         return f"**Análisis Automático (Plan B):** Tendencia hacia el **{interpretacion}**. Relación significativa: {'Sí' if p_val < 0.05 else 'No'} (p={p_val:.4f})."
 
@@ -110,7 +110,6 @@ idiomas = {
 # ------------------------------------------------
 st.set_page_config(page_title="Investigación UNEMI", layout="wide")
 
-# Lógica de globos
 if st.session_state.get('lanzar_globos'):
     st.balloons()
     st.session_state.lanzar_globos = False
@@ -130,7 +129,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 4. SIDEBAR TRADUCIDO
+# 4. SIDEBAR DINÁMICO
 # ------------------------------------------------
 with st.sidebar:
     st.header("🌐 Language / Lingua")
@@ -194,14 +193,7 @@ with tab3:
     with col_radar:
         st.subheader("🧠 Radar Profile")
         fig_radar = go.Figure()
-        fig_radar.add_trace(go.Scatterpolar(
-            r=promedios.values, 
-            theta=habilidades, 
-            fill='toself', 
-            name='Promedio', 
-            fillcolor='rgba(190, 227, 219, 0.6)', 
-            line=dict(color='#BEE3DB')
-        ))
+        fig_radar.add_trace(go.Scatterpolar(r=promedios.values, theta=habilidades, fill='toself', name='Promedio', fillcolor='rgba(190, 227, 219, 0.6)', line=dict(color='#BEE3DB')))
         fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[1,5])), showlegend=False)
         st.plotly_chart(fig_radar, use_container_width=True)
     with col_bar:
@@ -212,6 +204,13 @@ with tab4:
     st.header(lang["tabs"][3])
     datos["Indice_PC"] = datos[habilidades].mean(axis=1)
     datos["Uso_IA_bin"] = datos["Uso_IA"].map({"Andamiaje":1, "Sustituto":0})
+    
+    st.subheader("📈 Regression Analysis / Analisi di Regressione")
+    fig_reg = px.scatter(datos, x="Uso_IA_bin", y="Indice_PC", trendline="ols", color="Uso_IA",
+                         color_discrete_map={"Andamiaje": "#2E8B57", "Sustituto": "#CD5C5C"}, opacity=0.5)
+    fig_reg.update_layout(xaxis=dict(tickmode='array', tickvals=[0, 1], ticktext=[lang["m_sus"], lang["m_and"]]))
+    st.plotly_chart(fig_reg, use_container_width=True)
+
     modelo = sm.OLS(datos["Indice_PC"], sm.add_constant(datos["Uso_IA_bin"])).fit()
     correlacion, p_valor = stats.pearsonr(datos["Uso_IA_bin"], datos["Indice_PC"])
     
